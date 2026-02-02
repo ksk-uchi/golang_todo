@@ -1,0 +1,30 @@
+[tools]
+atlas = "v1.0.0"
+go = "1.25.6"
+
+[tasks.create-shadow-db]
+run = '''
+podman compose exec db -- mysql -u root --password=root_password -e "CREATE DATABASE todo_db_dev"
+'''
+
+[tasks.drop-shadow-db]
+run = '''
+podman compose exec db -- mysql -u root --password=root_password -e "DROP DATABASE todo_db_dev"
+'''
+
+[tasks.create-migrate]
+depends=["create-shadow-db"]
+depends_post=["drop-shadow-db"]
+run = '''
+atlas migrate diff create-todo-table\
+  --dir "file://ent/migrate/migrations" \
+  --to "ent://ent/schema" \
+  --dev-url "mysql://root:root_password@localhost:3306/todo_db_dev"
+'''
+
+[tasks.migrate]
+run = '''
+atlas migrate apply \
+  --dir "file://ent/migrate/migrations" \
+  --url "mysql://root:root_password@localhost:3306/todo_db"
+'''
