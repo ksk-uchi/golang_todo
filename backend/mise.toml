@@ -44,3 +44,11 @@ atlas migrate apply \
   --dir "file://ent/migrate/migrations" \
   --url "mysql://root:root_password@localhost:3306/todo_db"
 '''
+
+[tasks.new-schema]
+usage = '''
+arg "<name>" help="This will be a struct name."
+'''
+run = '''
+go run -mod=mod entgo.io/ent/cmd/ent new ${usage_name}
+'''
