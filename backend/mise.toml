@@ -14,10 +14,25 @@ podman compose exec db -- mysql -u root --password=root_password -e "DROP DATABA
 '''
 
 [tasks.create-migrate]
-depends=["create-shadow-db"]
-depends_post=["drop-shadow-db"]
+usage = '''
+arg "<migration_file_name>" help="This will be a part of migration file name."
+'''
 run = '''
-atlas migrate diff create-todo-table\
+# 1. 引数チェック (未指定ならここで即終了し、DB作成も行わない)
+if [ -z "$usage_migration_file_name" ]; then
+  echo "error: <migration_file_name> is required"
+  exit 1
+fi
+
+# 2. 後処理 (drop-shadow-db) を登録
+# EXIT シグナルを捕捉するため、成功・失敗に関わらずスクリプト終了時に実行される
+trap 'mise run drop-shadow-db' EXIT
+
+# 3. 前準備
+mise run create-shadow-db
+
+# 4. メイン処理
+atlas migrate diff "${usage_migration_file_name}" \
   --dir "file://ent/migrate/migrations" \
   --to "ent://ent/schema" \
   --dev-url "mysql://root:root_password@localhost:3306/todo_db_dev"
