@@ -1,0 +1,6 @@
+pre-commit:
+  commands:
+    backend-linter:
+      root: "backend/"
+      glob: "*.{go}"
+      run: gofmt -w {staged_files} && go mod tidy
