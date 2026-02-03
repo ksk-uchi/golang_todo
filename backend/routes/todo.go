@@ -6,16 +6,14 @@ import (
 	"github.com/labstack/echo/v5"
 )
 
-func NewTodoRouter(todoH *handlers.TodoHandler, txM echo.MiddlewareFunc) *TodoRouter {
+func NewTodoRouter(todoH *handlers.TodoHandler) *TodoRouter {
 	return &TodoRouter{
-		TodoHandler:  todoH,
-		txMiddleware: txM,
+		TodoHandler: todoH,
 	}
 }
 
 type TodoRouter struct {
-	TodoHandler  *handlers.TodoHandler
-	txMiddleware echo.MiddlewareFunc
+	TodoHandler *handlers.TodoHandler
 }
 
 func (r *TodoRouter) SetupTodoRoute(eg *echo.Group) {

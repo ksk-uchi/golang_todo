@@ -5,7 +5,6 @@ package main
 
 import (
 	"todo-app/handlers"
-	"todo-app/middlewares"
 	"todo-app/providers"
 	"todo-app/routes"
 	"todo-app/services"
@@ -14,34 +13,17 @@ import (
 	"github.com/labstack/echo/v5"
 )
 
-// provider
-var providerSet = wire.NewSet(
-	providers.NewEntClient,
-)
-
-// middleware
-var middlewareSet = wire.NewSet(
-	middlewares.NewTransactionMiddleware,
-)
-
-// handler
-var handlerSet = wire.NewSet(
+// todo
+var todoSet = wire.NewSet(
 	handlers.NewTodoHandler,
-)
-
-// service
-var serviceSet = wire.NewSet(
-	services.NewTodoService,
-)
-
-// route
-var routeSet = wire.NewSet(
-	routes.NewRouter,
 	routes.NewTodoRouter,
+	services.ProvideTodoServiceFactory,
 )
 
 // app
 var appSet = wire.NewSet(
+	providers.NewEntClient,
+	routes.NewRouter,
 	echo.New,
 	NewApp,
 )
@@ -57,11 +39,7 @@ func NewApp(e *echo.Echo, r *routes.Router) *App {
 
 func InitializeApp() (*App, func(), error) {
 	wire.Build(
-		providerSet,
-		middlewareSet,
-		handlerSet,
-		serviceSet,
-		routeSet,
+		todoSet,
 		appSet,
 	)
 	return &App{}, nil, nil

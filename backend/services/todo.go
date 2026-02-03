@@ -1,24 +1,34 @@
 package services
 
 import (
+	"context"
 	"todo-app/ent"
-	"todo-app/ent/todo"
-	"todo-app/middlewares"
-
-	"github.com/labstack/echo/v5"
+	"todo-app/repositories"
 )
 
-func NewTodoService() *TodoService {
-	return &TodoService{}
+type TodoServiceFactory func(*ent.Client) *TodoService
+
+func ProvideTodoServiceFactory() TodoServiceFactory {
+	return func(client *ent.Client) *TodoService {
+		repo := repositories.NewTodoRepository(client)
+		return NewTodoService(repo)
+	}
 }
 
-type TodoService struct{}
+type ITodoRepository interface {
+	FetchAllTodo(ctx context.Context) ([]*ent.Todo, error)
+}
 
-func (s *TodoService) GetTodoSlice(c *echo.Context) ([]*ent.Todo, error) {
-	tx := middlewares.GetTx(c)
+type TodoService struct {
+	repo ITodoRepository
+}
 
-	ctx := c.Request().Context()
-	return tx.Todo.Query().
-		Order(ent.Desc(todo.FieldCreatedAt)).
-		All(ctx)
+func NewTodoService(repo ITodoRepository) *TodoService {
+	return &TodoService{
+		repo: repo,
+	}
+}
+
+func (s *TodoService) GetTodoSlice(ctx context.Context) ([]*ent.Todo, error) {
+	return s.repo.FetchAllTodo(ctx)
 }
