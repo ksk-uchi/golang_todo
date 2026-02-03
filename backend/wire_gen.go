@@ -7,6 +7,7 @@
 package main
 
 import (
+	"github.com/google/wire"
 	"github.com/labstack/echo/v5"
 	"todo-app/handlers"
 	"todo-app/middlewares"
@@ -19,14 +20,15 @@ import (
 
 func InitializeApp() (*App, func(), error) {
 	echoEcho := echo.New()
-	todoService := services.NewTodoService()
-	todoHandler := handlers.NewTodoHandler(todoService)
 	client, cleanup, err := providers.NewEntClient()
 	if err != nil {
 		return nil, nil, err
 	}
 	middlewareFunc := middlewares.NewTransactionMiddleware(client)
-	router := routes.NewRouter(todoHandler, client, middlewareFunc)
+	todoService := services.NewTodoService()
+	todoHandler := handlers.NewTodoHandler(todoService)
+	todoRouter := routes.NewTodoRouter(todoHandler, middlewareFunc)
+	router := routes.NewRouter(middlewareFunc, todoRouter)
 	app := NewApp(echoEcho, router)
 	return app, func() {
 		cleanup()
@@ -34,6 +36,24 @@ func InitializeApp() (*App, func(), error) {
 }
 
 // wire.go:
+
+// provider
+var providerSet = wire.NewSet(providers.NewEntClient)
+
+// middleware
+var middlewareSet = wire.NewSet(middlewares.NewTransactionMiddleware)
+
+// handler
+var handlerSet = wire.NewSet(handlers.NewTodoHandler)
+
+// service
+var serviceSet = wire.NewSet(services.NewTodoService)
+
+// route
+var routeSet = wire.NewSet(routes.NewRouter, routes.NewTodoRouter)
+
+// app
+var appSet = wire.NewSet(echo.New, NewApp)
 
 type App struct {
 	Engine *echo.Echo
