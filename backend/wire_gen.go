@@ -19,12 +19,12 @@ import (
 
 func InitializeApp() (*App, func(), error) {
 	echoEcho := echo.New()
+	todoService := services.NewTodoService()
+	todoHandler := handlers.NewTodoHandler(todoService)
 	client, cleanup, err := providers.NewEntClient()
 	if err != nil {
 		return nil, nil, err
 	}
-	todoService := services.NewTodoService(client)
-	todoHandler := handlers.NewTodoHandler(todoService)
 	middlewareFunc := middlewares.NewTransactionMiddleware(client)
 	router := routes.NewRouter(todoHandler, client, middlewareFunc)
 	app := NewApp(echoEcho, router)

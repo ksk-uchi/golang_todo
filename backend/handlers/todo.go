@@ -1,38 +1,29 @@
 package handlers
 
 import (
-	"net/http"
-	"todo-app/ent"
-	"todo-app/ent/todo"
-	"todo-app/middlewares" // トランザクション取得用
+	"net/http" // トランザクション取得用
+	"todo-app/dto"
 	"todo-app/services"
 
 	"github.com/labstack/echo/v5"
 )
 
-type TodoHandler struct {
-	service services.ITodoService
-}
-
-func NewTodoHandler(s services.ITodoService) *TodoHandler {
+func NewTodoHandler(s *services.TodoService) *TodoHandler {
 	return &TodoHandler{service: s}
 }
 
+type TodoHandler struct {
+	service *services.TodoService
+}
+
 func (h *TodoHandler) ListTodo(c *echo.Context) error {
-	tx := middlewares.GetTx(c)
-
-	ctx := c.Request().Context()
-	todos, err := tx.Todo.Query().
-		Order(ent.Desc(todo.FieldCreatedAt)).
-		All(ctx)
-
+	todos, err := h.service.GetTodoSlice(c)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "failed to fetch todos",
 		})
 	}
-
-	res := h.service.EntitiesToDTOs(todos)
+	res := dto.EntitiesToTodoDtoSlice(todos)
 
 	return c.JSON(http.StatusOK, res)
 }

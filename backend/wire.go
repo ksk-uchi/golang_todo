@@ -28,7 +28,6 @@ func InitializeApp() (*App, func(), error) {
 		middlewares.NewTransactionMiddleware,
 		providers.NewEntClient,
 		services.NewTodoService,
-		wire.Bind(new(services.ITodoService), new(*services.TodoService)),
 		handlers.NewTodoHandler,
 		routes.NewRouter,
 		echo.New,
