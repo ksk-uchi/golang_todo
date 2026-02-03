@@ -5,6 +5,7 @@ go 1.25.6
 require (
 	entgo.io/ent v0.14.5
 	github.com/go-sql-driver/mysql v1.9.3
+	github.com/google/wire v0.7.0
 	github.com/labstack/echo/v5 v5.0.1
 )
 
@@ -24,5 +25,4 @@ require (
 	github.com/zclconf/go-cty-yaml v1.1.0 // indirect
 	golang.org/x/mod v0.31.0 // indirect
 	golang.org/x/text v0.33.0 // indirect
-	golang.org/x/time v0.14.0 // indirect
 )

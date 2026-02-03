@@ -3,11 +3,10 @@ package middlewares
 import (
 	"todo-app/ent"
 
-	_ "github.com/go-sql-driver/mysql"
 	"github.com/labstack/echo/v5"
 )
 
-func TransactionMiddleware(client *ent.Client) echo.MiddlewareFunc {
+func NewTransactionMiddleware(client *ent.Client) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c *echo.Context) error {
 			tx, err := client.Tx(c.Request().Context())
@@ -15,16 +14,14 @@ func TransactionMiddleware(client *ent.Client) echo.MiddlewareFunc {
 				return err
 			}
 
-			// トランザクションを Context にセット
+			// Context にセット
 			c.Set("tx", tx)
 
-			// 次の処理（ハンドラー）を実行
 			if err := next(c); err != nil {
-				tx.Rollback() // エラーがあればロールバック
+				tx.Rollback()
 				return err
 			}
-
-			return tx.Commit() // 正常終了ならコミット
+			return tx.Commit()
 		}
 	}
 }

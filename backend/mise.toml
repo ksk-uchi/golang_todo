@@ -2,6 +2,7 @@
 air = "1.64.4"
 atlas = "v1.0.0"
 go = "1.25.6"
+"go:github.com/google/wire/cmd/wire" = "0.7.0"
 
 [tasks.create-shadow-db]
 run = '''

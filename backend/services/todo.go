@@ -5,28 +5,26 @@ import (
 	"todo-app/ent"
 )
 
-type TodoService struct{}
-
-func NewTodoService() *TodoService {
-	return &TodoService{}
+type ITodoService interface {
+	EntitiesToDTOs(todos []*ent.Todo) []dto.ListTodoResponse
 }
 
-// EntityToDTO は単一の ent.Todo を dto.ListTodoResponse に変換します
-func (s *TodoService) EntityToDTO(t *ent.Todo) dto.ListTodoResponse {
-	return dto.ListTodoResponse{
-		ID:          t.ID,
-		Title:       t.Title,
-		Description: t.Description,
-		CreatedAt:   t.CreatedAt,
-		UpdatedAt:   t.UpdatedAt,
-	}
+type TodoService struct {
+	client *ent.Client
 }
 
-// EntitiesToDTOs はスライスを一括変換します
+func NewTodoService(client *ent.Client) *TodoService { return &TodoService{client: client} }
+
 func (s *TodoService) EntitiesToDTOs(todos []*ent.Todo) []dto.ListTodoResponse {
 	res := make([]dto.ListTodoResponse, len(todos))
 	for i, t := range todos {
-		res[i] = s.EntityToDTO(t)
+		res[i] = dto.ListTodoResponse{
+			ID:          t.ID,
+			Title:       t.Title,
+			Description: t.Description,
+			CreatedAt:   t.CreatedAt,
+			UpdatedAt:   t.UpdatedAt,
+		}
 	}
 	return res
 }
