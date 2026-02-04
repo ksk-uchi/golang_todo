@@ -3,4 +3,4 @@ pre-commit:
     backend-fmt:
       root: "backend/"
       glob: "*.{go}"
-      run: gofmt -w {staged_files} && go mod tidy
+      run: gofmt -w {staged_files} && go mod tidy && git add {staged_files}
