@@ -21,11 +21,6 @@ func EntitiesToTodoDtoSlice(todos []*ent.Todo) []TodoDto {
 	return res
 }
 
-type CreateTodoDto struct {
-	Title       string `json:"title" validate:"required,max=100"`
-	Description string `json:"description" validate:"max=200"`
-}
-
 func EntityToTodoDto(todo *ent.Todo) TodoDto {
 	return TodoDto{
 		ID:          todo.ID,

@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"testing"
 	"time"
-	"todo-app/dto"
 	"todo-app/ent"
 	"todo-app/repositories"
 	"todo-app/services"
@@ -89,11 +88,7 @@ func TestTodoService_CreateTodo(t *testing.T) {
 		ctx := context.Background()
 		service := services.NewTodoService(ctx, slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
 
-		createDto := &dto.CreateTodoDto{
-			Title:       "New Task",
-			Description: "New Description",
-		}
-		result, err := service.CreateTodo(createDto)
+		result, err := service.CreateTodo("New Task", "New Description")
 
 		assert.NoError(t, err)
 		assert.NotNil(t, result)
@@ -110,11 +105,7 @@ func TestTodoService_CreateTodo(t *testing.T) {
 		ctx := context.Background()
 		service := services.NewTodoService(ctx, slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
 
-		createDto := &dto.CreateTodoDto{
-			Title:       "New Task",
-			Description: "New Description",
-		}
-		result, err := service.CreateTodo(createDto)
+		result, err := service.CreateTodo("New Task", "New Description")
 
 		assert.Error(t, err)
 		assert.Nil(t, result)

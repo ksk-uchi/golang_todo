@@ -27,6 +27,11 @@ func NewTodoHandler(logger *slog.Logger, client *ent.Client, factory services.To
 	}
 }
 
+type createTodoRequest struct {
+	Title       string `json:"title" validate:"required,max=100"`
+	Description string `json:"description" validate:"max=200"`
+}
+
 func (h *TodoHandler) CreateTodo(c *echo.Context) error {
 	errorHandling := func(c *echo.Context, err error, code int) error {
 		h.logger.Error(err.Error())
@@ -35,12 +40,12 @@ func (h *TodoHandler) CreateTodo(c *echo.Context) error {
 		})
 	}
 
-	var createTodoDto dto.CreateTodoDto
-	if err := c.Bind(&createTodoDto); err != nil {
+	var req createTodoRequest
+	if err := c.Bind(&req); err != nil {
 		return errorHandling(c, err, http.StatusBadRequest)
 	}
 
-	if err := validate.Struct(&createTodoDto); err != nil {
+	if err := validate.Struct(&req); err != nil {
 		return errorHandling(c, err, http.StatusBadRequest)
 	}
 
@@ -50,7 +55,7 @@ func (h *TodoHandler) CreateTodo(c *echo.Context) error {
 		return errorHandling(c, err, http.StatusInternalServerError)
 	}
 
-	todo, err := service.CreateTodo(&createTodoDto)
+	todo, err := service.CreateTodo(req.Title, req.Description)
 	if err != nil {
 		return errorHandling(c, err, http.StatusInternalServerError)
 	}

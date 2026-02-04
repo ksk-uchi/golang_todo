@@ -3,7 +3,6 @@ package services
 import (
 	"context"
 	"log/slog"
-	"todo-app/dto"
 	"todo-app/ent"
 	"todo-app/repositories"
 )
@@ -41,6 +40,6 @@ func (s *TodoService) GetTodoSlice() ([]*ent.Todo, error) {
 	return todos, err
 }
 
-func (s *TodoService) CreateTodo(d *dto.CreateTodoDto) (*ent.Todo, error) {
-	return s.repo.CreateTodo(d.Title, d.Description)
+func (s *TodoService) CreateTodo(title string, description string) (*ent.Todo, error) {
+	return s.repo.CreateTodo(title, description)
 }
