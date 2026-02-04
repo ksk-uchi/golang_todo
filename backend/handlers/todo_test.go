@@ -124,5 +124,8 @@ func TestTodoHandler_CreateTodo_Integration(t *testing.T) {
 		e.ServeHTTP(rec, req)
 
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
+
+		expected := `{"error":{"title":"タイトルは必須です"}}`
+		assert.JSONEq(t, expected, rec.Body.String())
 	})
 }
