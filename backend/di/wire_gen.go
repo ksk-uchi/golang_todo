@@ -4,11 +4,12 @@
 //go:build !wireinject
 // +build !wireinject
 
-package main
+package di
 
 import (
 	"github.com/google/wire"
 	"github.com/labstack/echo/v5"
+	"todo-app/ent"
 	"todo-app/handlers"
 	"todo-app/providers"
 	"todo-app/routes"
@@ -31,6 +32,15 @@ func InitializeApp() (*App, func(), error) {
 	return app, func() {
 		cleanup()
 	}, nil
+}
+
+func InitializeTestApp(e *echo.Echo, client *ent.Client) (*App, error) {
+	todoServiceFactory := services.ProvideTodoServiceFactory()
+	todoHandler := handlers.NewTodoHandler(client, todoServiceFactory)
+	todoRouter := routes.NewTodoRouter(todoHandler)
+	router := routes.NewRouter(todoRouter)
+	app := NewApp(e, router)
+	return app, nil
 }
 
 // wire.go:

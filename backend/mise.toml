@@ -53,3 +53,8 @@ arg "<name>" help="This will be a struct name."
 run = '''
 go run -mod=mod entgo.io/ent/cmd/ent new ${usage_name}
 '''
+
+[tasks.wire]
+run = '''
+wire gen todo-app/di
+'''

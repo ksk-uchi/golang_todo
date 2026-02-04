@@ -1,9 +1,12 @@
 package main
 
-import "log"
+import (
+	"log"
+	"todo-app/di"
+)
 
 func main() {
-	app, cleanup, err := InitializeApp()
+	app, cleanup, err := di.InitializeApp()
 	if err != nil {
 		log.Fatal(err)
 	}

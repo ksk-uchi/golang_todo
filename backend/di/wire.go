@@ -1,9 +1,10 @@
 //go:build wireinject
 // +build wireinject
 
-package main
+package di
 
 import (
+	"todo-app/ent"
 	"todo-app/handlers"
 	"todo-app/providers"
 	"todo-app/routes"
@@ -43,4 +44,13 @@ func InitializeApp() (*App, func(), error) {
 		appSet,
 	)
 	return &App{}, nil, nil
+}
+
+func InitializeTestApp(e *echo.Echo, client *ent.Client) (*App, error) {
+	wire.Build(
+		todoSet,
+		routes.NewRouter,
+		NewApp,
+	)
+	return &App{}, nil
 }
