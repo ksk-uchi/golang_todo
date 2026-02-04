@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"log/slog"
+	"todo-app/dto"
 	"todo-app/ent"
 	"todo-app/repositories"
 )
@@ -18,6 +19,7 @@ func ProvideTodoServiceFactory() TodoServiceFactory {
 
 type ITodoRepository interface {
 	FetchAllTodo() ([]*ent.Todo, error)
+	CreateTodo(title string, description string) (*ent.Todo, error)
 }
 
 func NewTodoService(ctx context.Context, logger *slog.Logger, repo ITodoRepository) *TodoService {
@@ -37,4 +39,8 @@ type TodoService struct {
 func (s *TodoService) GetTodoSlice() ([]*ent.Todo, error) {
 	todos, err := s.repo.FetchAllTodo()
 	return todos, err
+}
+
+func (s *TodoService) CreateTodo(d *dto.CreateTodoDto) (*ent.Todo, error) {
+	return s.repo.CreateTodo(d.Title, d.Description)
 }
