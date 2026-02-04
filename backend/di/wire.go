@@ -25,6 +25,7 @@ var todoSet = wire.NewSet(
 var appSet = wire.NewSet(
 	providers.NewEntClient,
 	routes.NewRouter,
+	NewLogger,
 	echo.New,
 	NewApp,
 )
@@ -50,6 +51,7 @@ func InitializeTestApp(e *echo.Echo, client *ent.Client) (*App, error) {
 	wire.Build(
 		todoSet,
 		routes.NewRouter,
+		NewLogger,
 		NewApp,
 	)
 	return &App{}, nil

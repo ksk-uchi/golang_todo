@@ -20,12 +20,13 @@ import (
 
 func InitializeApp() (*App, func(), error) {
 	echoEcho := echo.New()
+	logger := NewLogger()
 	client, cleanup, err := providers.NewEntClient()
 	if err != nil {
 		return nil, nil, err
 	}
 	todoServiceFactory := services.ProvideTodoServiceFactory()
-	todoHandler := handlers.NewTodoHandler(client, todoServiceFactory)
+	todoHandler := handlers.NewTodoHandler(logger, client, todoServiceFactory)
 	todoRouter := routes.NewTodoRouter(todoHandler)
 	router := routes.NewRouter(todoRouter)
 	app := NewApp(echoEcho, router)
@@ -35,8 +36,9 @@ func InitializeApp() (*App, func(), error) {
 }
 
 func InitializeTestApp(e *echo.Echo, client *ent.Client) (*App, error) {
+	logger := NewLogger()
 	todoServiceFactory := services.ProvideTodoServiceFactory()
-	todoHandler := handlers.NewTodoHandler(client, todoServiceFactory)
+	todoHandler := handlers.NewTodoHandler(logger, client, todoServiceFactory)
 	todoRouter := routes.NewTodoRouter(todoHandler)
 	router := routes.NewRouter(todoRouter)
 	app := NewApp(e, router)
@@ -49,7 +51,7 @@ func InitializeTestApp(e *echo.Echo, client *ent.Client) (*App, error) {
 var todoSet = wire.NewSet(handlers.NewTodoHandler, routes.NewTodoRouter, services.ProvideTodoServiceFactory)
 
 // app
-var appSet = wire.NewSet(providers.NewEntClient, routes.NewRouter, echo.New, NewApp)
+var appSet = wire.NewSet(providers.NewEntClient, routes.NewRouter, NewLogger, echo.New, NewApp)
 
 type App struct {
 	Engine *echo.Echo

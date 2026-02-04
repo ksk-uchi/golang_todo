@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log/slog"
 	"net/http"
 	"todo-app/dto"
 	"todo-app/ent"
@@ -10,27 +11,35 @@ import (
 )
 
 type TodoHandler struct {
+	logger         *slog.Logger
 	client         *ent.Client
 	serviceFactory services.TodoServiceFactory
 }
 
-func NewTodoHandler(client *ent.Client, factory services.TodoServiceFactory) *TodoHandler {
+func NewTodoHandler(logger *slog.Logger, client *ent.Client, factory services.TodoServiceFactory) *TodoHandler {
 	return &TodoHandler{
+		logger:         logger,
 		client:         client,
 		serviceFactory: factory,
 	}
 }
 
 func (h *TodoHandler) ListTodo(c *echo.Context) error {
-	ctx := c.Request().Context()
-
-	service := h.serviceFactory(h.client)
-	todos, err := service.GetTodoSlice(ctx)
-	if err != nil {
-		c.Logger().Error(err.Error())
+	errorHandling := func(c *echo.Context, err error) error {
+		h.logger.Error(err.Error())
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "failed to fetch todos",
 		})
+	}
+
+	ctx := c.Request().Context()
+	service, err := h.serviceFactory(ctx, h.logger, h.client)
+	if err != nil {
+		return errorHandling(c, err)
+	}
+	todos, err := service.GetTodoSlice()
+	if err != nil {
+		return errorHandling(c, err)
 	}
 
 	res := dto.EntitiesToTodoDtoSlice(todos)

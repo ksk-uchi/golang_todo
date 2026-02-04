@@ -7,13 +7,14 @@ import (
 )
 
 type TodoRepository struct {
+	ctx    context.Context
 	client *ent.Client
 }
 
-func NewTodoRepository(client *ent.Client) *TodoRepository {
-	return &TodoRepository{client: client}
+func NewTodoRepository(ctx context.Context, client *ent.Client) *TodoRepository {
+	return &TodoRepository{ctx: ctx, client: client}
 }
 
-func (r *TodoRepository) FetchAllTodo(ctx context.Context) ([]*ent.Todo, error) {
-	return r.client.Todo.Query().Order(ent.Desc(todo.FieldCreatedAt)).All(ctx)
+func (r *TodoRepository) FetchAllTodo() ([]*ent.Todo, error) {
+	return r.client.Todo.Query().Order(ent.Desc(todo.FieldCreatedAt)).All(r.ctx)
 }
