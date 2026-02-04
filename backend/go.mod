@@ -7,6 +7,7 @@ require (
 	github.com/go-sql-driver/mysql v1.9.3
 	github.com/google/wire v0.7.0
 	github.com/labstack/echo/v5 v5.0.1
+	github.com/mattn/go-sqlite3 v1.14.17
 	github.com/stretchr/testify v1.11.1
 )
 
