@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"net/http" // トランザクション取得用
+	"net/http"
 	"todo-app/dto"
 	"todo-app/ent"
 	"todo-app/services"
