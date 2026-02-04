@@ -6,6 +6,7 @@ import (
 	"todo-app/dto"
 	"todo-app/ent"
 	"todo-app/services"
+	"todo-app/validators"
 
 	"github.com/labstack/echo/v5"
 )
@@ -22,6 +23,42 @@ func NewTodoHandler(logger *slog.Logger, client *ent.Client, factory services.To
 		client:         client,
 		serviceFactory: factory,
 	}
+}
+
+func (h *TodoHandler) CreateTodo(c *echo.Context) error {
+	errorHandling := func(c *echo.Context, err error, code int) error {
+		h.logger.Error(err.Error())
+		return c.JSON(code, map[string]string{
+			"error": err.Error(),
+		})
+	}
+
+	var req validators.CreateTodoRequest
+	if err := c.Bind(&req); err != nil {
+		return errorHandling(c, err, http.StatusBadRequest)
+	}
+
+	if errorMessages := req.Validate(); errorMessages != nil {
+		h.logger.Error("validation error", slog.Any("errors", errorMessages))
+		return c.JSON(http.StatusBadRequest, map[string]map[string]string{
+			"error": errorMessages,
+		})
+	}
+
+	ctx := c.Request().Context()
+	service, err := h.serviceFactory(ctx, h.logger, h.client)
+	if err != nil {
+		return errorHandling(c, err, http.StatusInternalServerError)
+	}
+
+	todo, err := service.CreateTodo(req.Title, req.Description)
+	if err != nil {
+		return errorHandling(c, err, http.StatusInternalServerError)
+	}
+
+	res := dto.EntityToTodoDto(todo)
+
+	return c.JSON(http.StatusCreated, res)
 }
 
 func (h *TodoHandler) ListTodo(c *echo.Context) error {

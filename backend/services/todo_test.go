@@ -17,11 +17,19 @@ import (
 type spyTodoRepo struct {
 	repositories.TodoRepository
 	fetchAll func() ([]*ent.Todo, error)
+	create   func(title string, description string) (*ent.Todo, error)
 }
 
 func (s *spyTodoRepo) FetchAllTodo() ([]*ent.Todo, error) {
 	if s.fetchAll != nil {
 		return s.fetchAll()
+	}
+	return nil, nil
+}
+
+func (s *spyTodoRepo) CreateTodo(title string, description string) (*ent.Todo, error) {
+	if s.create != nil {
+		return s.create(title, description)
 	}
 	return nil, nil
 }
@@ -60,6 +68,47 @@ func TestTodoService_GetTodoSlice(t *testing.T) {
 
 		assert.Error(t, err)
 		assert.Nil(t, results)
+		assert.Equal(t, "db connection error", err.Error())
+	})
+}
+
+func TestTodoService_CreateTodo(t *testing.T) {
+	t.Run("リポジトリにデータが正常に保存されること", func(t *testing.T) {
+		repo := &spyTodoRepo{
+			create: func(title string, description string) (*ent.Todo, error) {
+				return &ent.Todo{
+					ID:          1,
+					Title:       title,
+					Description: description,
+					CreatedAt:   time.Now(),
+					UpdatedAt:   time.Now(),
+				}, nil
+			},
+		}
+		ctx := context.Background()
+		service := services.NewTodoService(ctx, slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
+
+		result, err := service.CreateTodo("New Task", "New Description")
+
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+		assert.Equal(t, "New Task", result.Title)
+		assert.Equal(t, "New Description", result.Description)
+	})
+
+	t.Run("リポジトリがエラーを返した場合、そのままエラーを返すこと", func(t *testing.T) {
+		repo := &spyTodoRepo{
+			create: func(title string, description string) (*ent.Todo, error) {
+				return nil, errors.New("db connection error")
+			},
+		}
+		ctx := context.Background()
+		service := services.NewTodoService(ctx, slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
+
+		result, err := service.CreateTodo("New Task", "New Description")
+
+		assert.Error(t, err)
+		assert.Nil(t, result)
 		assert.Equal(t, "db connection error", err.Error())
 	})
 }

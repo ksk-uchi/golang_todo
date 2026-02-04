@@ -16,13 +16,17 @@ type TodoDto struct {
 func EntitiesToTodoDtoSlice(todos []*ent.Todo) []TodoDto {
 	res := make([]TodoDto, len(todos))
 	for i, t := range todos {
-		res[i] = TodoDto{
-			ID:          t.ID,
-			Title:       t.Title,
-			Description: t.Description,
-			CreatedAt:   t.CreatedAt,
-			UpdatedAt:   t.UpdatedAt,
-		}
+		res[i] = EntityToTodoDto(t)
 	}
 	return res
+}
+
+func EntityToTodoDto(todo *ent.Todo) TodoDto {
+	return TodoDto{
+		ID:          todo.ID,
+		Title:       todo.Title,
+		Description: todo.Description,
+		CreatedAt:   todo.CreatedAt,
+		UpdatedAt:   todo.UpdatedAt,
+	}
 }
