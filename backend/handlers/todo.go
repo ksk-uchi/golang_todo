@@ -3,16 +3,13 @@ package handlers
 import (
 	"log/slog"
 	"net/http"
-	"strings"
 	"todo-app/dto"
 	"todo-app/ent"
 	"todo-app/services"
+	"todo-app/validators"
 
-	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v5"
 )
-
-var validate = validator.New()
 
 type TodoHandler struct {
 	logger         *slog.Logger
@@ -28,11 +25,6 @@ func NewTodoHandler(logger *slog.Logger, client *ent.Client, factory services.To
 	}
 }
 
-type createTodoRequest struct {
-	Title       string `json:"title" validate:"required,max=100"`
-	Description string `json:"description" validate:"max=200"`
-}
-
 func (h *TodoHandler) CreateTodo(c *echo.Context) error {
 	errorHandling := func(c *echo.Context, err error, code int) error {
 		h.logger.Error(err.Error())
@@ -41,36 +33,12 @@ func (h *TodoHandler) CreateTodo(c *echo.Context) error {
 		})
 	}
 
-	var req createTodoRequest
+	var req validators.CreateTodoRequest
 	if err := c.Bind(&req); err != nil {
 		return errorHandling(c, err, http.StatusBadRequest)
 	}
 
-	if err := validate.Struct(&req); err != nil {
-		validationErrors, ok := err.(validator.ValidationErrors)
-		if !ok {
-			return errorHandling(c, err, http.StatusBadRequest)
-		}
-
-		errorMessages := make(map[string]string)
-		for _, fe := range validationErrors {
-			field := strings.ToLower(fe.Field())
-			switch field {
-			case "title":
-				switch fe.Tag() {
-				case "required":
-					errorMessages[field] = "タイトルは必須です"
-				case "max":
-					errorMessages[field] = "タイトルは" + fe.Param() + "文字以内で入力してください"
-				}
-			case "description":
-				switch fe.Tag() {
-				case "max":
-					errorMessages[field] = "説明は" + fe.Param() + "文字以内で入力してください"
-				}
-			}
-		}
-
+	if errorMessages := req.Validate(); errorMessages != nil {
 		h.logger.Error("validation error", slog.Any("errors", errorMessages))
 		return c.JSON(http.StatusBadRequest, map[string]map[string]string{
 			"error": errorMessages,
