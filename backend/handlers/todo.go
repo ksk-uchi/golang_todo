@@ -27,6 +27,7 @@ func (h *TodoHandler) ListTodo(c *echo.Context) error {
 	service := h.serviceFactory(h.client)
 	todos, err := service.GetTodoSlice(ctx)
 	if err != nil {
+		c.Logger().Error(err.Error())
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "failed to fetch todos",
 		})
