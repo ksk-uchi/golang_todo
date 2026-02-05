@@ -19,6 +19,7 @@ func ProvideTodoServiceFactory() TodoServiceFactory {
 type ITodoRepository interface {
 	FetchAllTodo() ([]*ent.Todo, error)
 	CreateTodo(title string, description string) (*ent.Todo, error)
+	UpdateTodo(id int, title *string, description *string) (*ent.Todo, error)
 }
 
 func NewTodoService(ctx context.Context, logger *slog.Logger, repo ITodoRepository) *TodoService {
@@ -42,4 +43,8 @@ func (s *TodoService) GetTodoSlice() ([]*ent.Todo, error) {
 
 func (s *TodoService) CreateTodo(title string, description string) (*ent.Todo, error) {
 	return s.repo.CreateTodo(title, description)
+}
+
+func (s *TodoService) UpdateTodo(id int, title *string, description *string) (*ent.Todo, error) {
+	return s.repo.UpdateTodo(id, title, description)
 }

@@ -45,3 +45,36 @@ func (r *CreateTodoRequest) Validate() map[string]string {
 	}
 	return nil
 }
+
+type UpdateTodoRequest struct {
+	Title       *string `json:"title" validate:"omitempty,max=100"`
+	Description *string `json:"description" validate:"omitempty,max=200"`
+}
+
+func (r *UpdateTodoRequest) Validate() map[string]string {
+	if err := validate.Struct(r); err != nil {
+		validationErrors, ok := err.(validator.ValidationErrors)
+		if !ok {
+			return map[string]string{"error": "An unexpected error occurred during validation."}
+		}
+
+		errorMessages := make(map[string]string)
+		for _, fe := range validationErrors {
+			field := strings.ToLower(fe.Field())
+			switch field {
+			case "title":
+				switch fe.Tag() {
+				case "max":
+					errorMessages[field] = "タイトルは" + fe.Param() + "文字以内で入力してください"
+				}
+			case "description":
+				switch fe.Tag() {
+				case "max":
+					errorMessages[field] = "説明は" + fe.Param() + "文字以内で入力してください"
+				}
+			}
+		}
+		return errorMessages
+	}
+	return nil
+}

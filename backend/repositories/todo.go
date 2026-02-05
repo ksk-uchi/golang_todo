@@ -25,3 +25,10 @@ func (r *TodoRepository) CreateTodo(title string, description string) (*ent.Todo
 		SetDescription(description).
 		Save(r.ctx)
 }
+
+func (r *TodoRepository) UpdateTodo(id int, title *string, description *string) (*ent.Todo, error) {
+	return r.client.Todo.UpdateOneID(id).
+		SetNillableTitle(title).
+		SetNillableDescription(description).
+		Save(r.ctx)
+}

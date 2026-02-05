@@ -3,6 +3,7 @@ package handlers
 import (
 	"log/slog"
 	"net/http"
+	"strconv"
 	"todo-app/dto"
 	"todo-app/ent"
 	"todo-app/services"
@@ -80,6 +81,51 @@ func (h *TodoHandler) ListTodo(c *echo.Context) error {
 	}
 
 	res := dto.EntitiesToTodoDtoSlice(todos)
+
+	return c.JSON(http.StatusOK, res)
+}
+
+func (h *TodoHandler) UpdateTodo(c *echo.Context) error {
+	errorHandling := func(c *echo.Context, err error, code int) error {
+		h.logger.Error(err.Error())
+		return c.JSON(code, map[string]string{
+			"error": err.Error(),
+		})
+	}
+
+	idParam := c.Param("id")
+	id, err := strconv.Atoi(idParam)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid idParam"})
+	}
+
+	var req validators.UpdateTodoRequest
+	if err := c.Bind(&req); err != nil {
+		return errorHandling(c, err, http.StatusBadRequest)
+	}
+
+	if errorMessages := req.Validate(); errorMessages != nil {
+		h.logger.Error("validation error", slog.Any("errors", errorMessages))
+		return c.JSON(http.StatusBadRequest, map[string]map[string]string{
+			"error": errorMessages,
+		})
+	}
+
+	ctx := c.Request().Context()
+	service, err := h.serviceFactory(ctx, h.logger, h.client)
+	if err != nil {
+		return errorHandling(c, err, http.StatusInternalServerError)
+	}
+
+	todo, err := service.UpdateTodo(id, req.Title, req.Description)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return c.JSON(http.StatusNotFound, map[string]string{"error": "todo not found"})
+		}
+		return errorHandling(c, err, http.StatusInternalServerError)
+	}
+
+	res := dto.EntityToTodoDto(todo)
 
 	return c.JSON(http.StatusOK, res)
 }
