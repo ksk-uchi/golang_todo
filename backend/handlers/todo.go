@@ -3,7 +3,6 @@ package handlers
 import (
 	"log/slog"
 	"net/http"
-	"strconv"
 	"todo-app/dto"
 	"todo-app/ent"
 	"todo-app/services"
@@ -93,8 +92,7 @@ func (h *TodoHandler) UpdateTodo(c *echo.Context) error {
 		})
 	}
 
-	idParam := c.Param("id")
-	id, err := strconv.Atoi(idParam)
+	id, err := echo.PathParam[int](c, "id")
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid idParam"})
 	}
