@@ -234,6 +234,6 @@ func TestTodoHandler_DeleteTodo_Integration(t *testing.T) {
 
 		e.ServeHTTP(rec, req)
 
-		assert.Equal(t, http.StatusNotFound, rec.Code)
+		assert.Equal(t, http.StatusNoContent, rec.Code)
 	})
 }

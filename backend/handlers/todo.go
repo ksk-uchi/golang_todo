@@ -150,7 +150,7 @@ func (h *TodoHandler) DeleteTodo(c *echo.Context) error {
 	err = service.DeleteTodo(id)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			return c.JSON(http.StatusNotFound, map[string]string{"error": "todo not found"})
+			return c.NoContent(http.StatusNoContent)
 		}
 		return errorHandling(c, err, http.StatusInternalServerError)
 	}
