@@ -129,3 +129,62 @@ func TestTodoHandler_CreateTodo_Integration(t *testing.T) {
 		assert.JSONEq(t, expected, rec.Body.String())
 	})
 }
+
+func TestTodoHandler_UpdateTodo_Integration(t *testing.T) {
+	t.Run("Todo 更新", func(t *testing.T) {
+		client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
+		defer client.Close()
+
+		e := echo.New()
+		app, err := di.InitializeTestApp(e, client)
+		assert.NoError(t, err)
+
+		app.Router.Setup(e)
+
+		todo := client.Todo.Create().
+			SetTitle("Old Title").
+			SetDescription("Old Description").
+			SaveX(context.Background())
+
+		body := `{"title": "Updated Title", "description": "Updated Description"}`
+		req := httptest.NewRequest(http.MethodPatch, "/todo/1", strings.NewReader(body)) // Assuming ID 1
+
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		rec := httptest.NewRecorder()
+
+		e.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+
+		var res dto.TodoDto
+		json.Unmarshal(rec.Body.Bytes(), &res)
+		assert.Equal(t, "Updated Title", res.Title)
+		assert.Equal(t, "Updated Description", res.Description)
+		assert.Equal(t, todo.ID, res.ID)
+
+		// Check DB
+		updatedTodo := client.Todo.GetX(context.Background(), todo.ID)
+		assert.Equal(t, "Updated Title", updatedTodo.Title)
+		assert.Equal(t, "Updated Description", updatedTodo.Description)
+	})
+
+	t.Run("Todo 更新 存在しないID", func(t *testing.T) {
+		client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
+		defer client.Close()
+
+		e := echo.New()
+		app, err := di.InitializeTestApp(e, client)
+		assert.NoError(t, err)
+
+		app.Router.Setup(e)
+
+		body := `{"title": "Updated Title"}`
+		req := httptest.NewRequest(http.MethodPatch, "/todo/999", strings.NewReader(body))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		rec := httptest.NewRecorder()
+
+		e.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusNotFound, rec.Code)
+	})
+}
