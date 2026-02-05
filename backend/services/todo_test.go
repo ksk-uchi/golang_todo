@@ -20,6 +20,7 @@ type spyTodoRepo struct {
 	create   func(title string, description string) (*ent.Todo, error)
 	update   func(id int, title *string, description *string) (*ent.Todo, error)
 	find     func(id int) (*ent.Todo, error)
+	delete   func(id int) error
 }
 
 func (s *spyTodoRepo) FetchAllTodo() ([]*ent.Todo, error) {
@@ -48,6 +49,13 @@ func (s *spyTodoRepo) UpdateTodo(id int, title *string, description *string) (*e
 		return s.update(id, title, description)
 	}
 	return nil, nil
+}
+
+func (s *spyTodoRepo) DeleteTodo(id int) error {
+	if s.delete != nil {
+		return s.delete(id)
+	}
+	return nil
 }
 
 func TestTodoService_GetTodoSlice(t *testing.T) {

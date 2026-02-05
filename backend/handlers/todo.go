@@ -127,3 +127,33 @@ func (h *TodoHandler) UpdateTodo(c *echo.Context) error {
 
 	return c.JSON(http.StatusOK, res)
 }
+
+func (h *TodoHandler) DeleteTodo(c *echo.Context) error {
+	errorHandling := func(c *echo.Context, err error, code int) error {
+		h.logger.Error(err.Error())
+		return c.JSON(code, map[string]string{
+			"error": err.Error(),
+		})
+	}
+
+	id, err := echo.PathParam[int](c, "id")
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid idParam"})
+	}
+
+	ctx := c.Request().Context()
+	service, err := h.serviceFactory(ctx, h.logger, h.client)
+	if err != nil {
+		return errorHandling(c, err, http.StatusInternalServerError)
+	}
+
+	err = service.DeleteTodo(id)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return c.JSON(http.StatusNotFound, map[string]string{"error": "todo not found"})
+		}
+		return errorHandling(c, err, http.StatusInternalServerError)
+	}
+
+	return c.NoContent(http.StatusNoContent)
+}
