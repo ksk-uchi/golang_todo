@@ -18,6 +18,8 @@ type spyTodoRepo struct {
 	repositories.TodoRepository
 	fetchAll func() ([]*ent.Todo, error)
 	create   func(title string, description string) (*ent.Todo, error)
+	update   func(id int, title *string, description *string) (*ent.Todo, error)
+	find     func(id int) (*ent.Todo, error)
 }
 
 func (s *spyTodoRepo) FetchAllTodo() ([]*ent.Todo, error) {
@@ -27,9 +29,23 @@ func (s *spyTodoRepo) FetchAllTodo() ([]*ent.Todo, error) {
 	return nil, nil
 }
 
+func (s *spyTodoRepo) FindTodo(id int) (*ent.Todo, error) {
+	if s.find != nil {
+		return s.find(id)
+	}
+	return nil, nil
+}
+
 func (s *spyTodoRepo) CreateTodo(title string, description string) (*ent.Todo, error) {
 	if s.create != nil {
 		return s.create(title, description)
+	}
+	return nil, nil
+}
+
+func (s *spyTodoRepo) UpdateTodo(id int, title *string, description *string) (*ent.Todo, error) {
+	if s.update != nil {
+		return s.update(id, title, description)
 	}
 	return nil, nil
 }
@@ -110,5 +126,75 @@ func TestTodoService_CreateTodo(t *testing.T) {
 		assert.Error(t, err)
 		assert.Nil(t, result)
 		assert.Equal(t, "db connection error", err.Error())
+	})
+}
+
+func TestTodoService_UpdateTodo(t *testing.T) {
+	t.Run("リポジトリに更新が正常に反映されること", func(t *testing.T) {
+		title := "Updated Title"
+		desc := "Updated Description"
+		repo := &spyTodoRepo{
+			update: func(id int, t *string, d *string) (*ent.Todo, error) {
+				return &ent.Todo{
+					ID:          1,
+					Title:       *t,
+					Description: *d,
+					CreatedAt:   time.Now(),
+					UpdatedAt:   time.Now(),
+				}, nil
+			},
+		}
+		ctx := context.Background()
+		service := services.NewTodoService(ctx, slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
+
+		result, err := service.UpdateTodo(1, &title, &desc)
+
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+		assert.Equal(t, "Updated Title", result.Title)
+		assert.Equal(t, "Updated Description", result.Description)
+	})
+
+	t.Run("リポジトリがエラーを返した場合、そのままエラーを返すこと", func(t *testing.T) {
+		title := "Updated Title"
+		repo := &spyTodoRepo{
+			update: func(id int, t *string, d *string) (*ent.Todo, error) {
+				return nil, errors.New("db error")
+			},
+		}
+		ctx := context.Background()
+		service := services.NewTodoService(ctx, slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
+
+		result, err := service.UpdateTodo(1, &title, nil)
+
+		assert.Error(t, err)
+		assert.Nil(t, result)
+		assert.Equal(t, "db error", err.Error())
+	})
+
+	t.Run("更新項目がない場合、更新を行わずID検索を実行すること", func(t *testing.T) {
+		repo := &spyTodoRepo{
+			update: func(id int, t *string, d *string) (*ent.Todo, error) {
+				return nil, errors.New("update should not be called")
+			},
+			find: func(id int) (*ent.Todo, error) {
+				return &ent.Todo{
+					ID:          id,
+					Title:       "Existing Title",
+					Description: "Existing Description",
+					CreatedAt:   time.Now(),
+					UpdatedAt:   time.Now(),
+				}, nil
+			},
+		}
+		ctx := context.Background()
+		service := services.NewTodoService(ctx, slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
+
+		result, err := service.UpdateTodo(1, nil, nil)
+
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+		assert.Equal(t, "Existing Title", result.Title)
+		assert.Equal(t, "Existing Description", result.Description)
 	})
 }
