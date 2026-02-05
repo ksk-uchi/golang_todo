@@ -3,6 +3,7 @@ package handlers_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -186,5 +187,53 @@ func TestTodoHandler_UpdateTodo_Integration(t *testing.T) {
 		e.ServeHTTP(rec, req)
 
 		assert.Equal(t, http.StatusNotFound, rec.Code)
+	})
+}
+
+func TestTodoHandler_DeleteTodo_Integration(t *testing.T) {
+	t.Run("Todo 削除", func(t *testing.T) {
+		client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
+		defer client.Close()
+
+		e := echo.New()
+		app, err := di.InitializeTestApp(e, client)
+		assert.NoError(t, err)
+
+		app.Router.Setup(e)
+
+		todo := client.Todo.Create().
+			SetTitle("To Be Deleted").
+			SetDescription("Description").
+			SaveX(context.Background())
+
+		req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/todo/%d", todo.ID), nil)
+		rec := httptest.NewRecorder()
+
+		e.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusNoContent, rec.Code)
+
+		// DBから消えているか確認
+		count, err := client.Todo.Query().Count(context.Background())
+		assert.NoError(t, err)
+		assert.Equal(t, 0, count)
+	})
+
+	t.Run("Todo 削除 存在しないID", func(t *testing.T) {
+		client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
+		defer client.Close()
+
+		e := echo.New()
+		app, err := di.InitializeTestApp(e, client)
+		assert.NoError(t, err)
+
+		app.Router.Setup(e)
+
+		req := httptest.NewRequest(http.MethodDelete, "/todo/999", nil)
+		rec := httptest.NewRecorder()
+
+		e.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusNoContent, rec.Code)
 	})
 }

@@ -21,6 +21,7 @@ type ITodoRepository interface {
 	FindTodo(id int) (*ent.Todo, error)
 	CreateTodo(title string, description string) (*ent.Todo, error)
 	UpdateTodo(id int, title *string, description *string) (*ent.Todo, error)
+	DeleteTodo(id int) error
 }
 
 func NewTodoService(ctx context.Context, logger *slog.Logger, repo ITodoRepository) *TodoService {
@@ -51,4 +52,8 @@ func (s *TodoService) UpdateTodo(id int, title *string, description *string) (*e
 		return s.repo.FindTodo(id)
 	}
 	return s.repo.UpdateTodo(id, title, description)
+}
+
+func (s *TodoService) DeleteTodo(id int) error {
+	return s.repo.DeleteTodo(id)
 }

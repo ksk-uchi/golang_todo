@@ -36,3 +36,7 @@ func (r *TodoRepository) UpdateTodo(id int, title *string, description *string) 
 		SetNillableDescription(description).
 		Save(r.ctx)
 }
+
+func (r *TodoRepository) DeleteTodo(id int) error {
+	return r.client.Todo.DeleteOneID(id).Exec(r.ctx)
+}

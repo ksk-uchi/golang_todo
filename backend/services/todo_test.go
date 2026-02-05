@@ -20,6 +20,7 @@ type spyTodoRepo struct {
 	create   func(title string, description string) (*ent.Todo, error)
 	update   func(id int, title *string, description *string) (*ent.Todo, error)
 	find     func(id int) (*ent.Todo, error)
+	delete   func(id int) error
 }
 
 func (s *spyTodoRepo) FetchAllTodo() ([]*ent.Todo, error) {
@@ -48,6 +49,13 @@ func (s *spyTodoRepo) UpdateTodo(id int, title *string, description *string) (*e
 		return s.update(id, title, description)
 	}
 	return nil, nil
+}
+
+func (s *spyTodoRepo) DeleteTodo(id int) error {
+	if s.delete != nil {
+		return s.delete(id)
+	}
+	return nil
 }
 
 func TestTodoService_GetTodoSlice(t *testing.T) {
@@ -196,5 +204,36 @@ func TestTodoService_UpdateTodo(t *testing.T) {
 		assert.NotNil(t, result)
 		assert.Equal(t, "Existing Title", result.Title)
 		assert.Equal(t, "Existing Description", result.Description)
+	})
+}
+
+func TestTodoService_DeleteTodo(t *testing.T) {
+	t.Run("リポジトリの削除が正常に終了すること", func(t *testing.T) {
+		repo := &spyTodoRepo{
+			delete: func(id int) error {
+				return nil
+			},
+		}
+		ctx := context.Background()
+		service := services.NewTodoService(ctx, slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
+
+		err := service.DeleteTodo(1)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("リポジトリがエラーを返した場合、そのままエラーを返すこと", func(t *testing.T) {
+		repo := &spyTodoRepo{
+			delete: func(id int) error {
+				return errors.New("db error")
+			},
+		}
+		ctx := context.Background()
+		service := services.NewTodoService(ctx, slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
+
+		err := service.DeleteTodo(1)
+
+		assert.Error(t, err)
+		assert.Equal(t, "db error", err.Error())
 	})
 }
