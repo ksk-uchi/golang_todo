@@ -4,3 +4,7 @@ pre-commit:
       root: "backend/"
       glob: "*.{go}"
       run: gofmt -w {staged_files} && go mod tidy && git add {staged_files}
+    frontend-fmt:
+      root: "frontend/"
+      glob: "*.{ts,tsx}"
+      run: pnpm prettier -w {staged_files} && pnpm eslint {staged_files} && git add {staged_files}
