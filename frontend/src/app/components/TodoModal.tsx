@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -26,24 +26,9 @@ export function TodoModal({
   onSave,
   isSaving,
 }: TodoModalProps) {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-
-  useEffect(() => {
-    if (isOpen) {
-      // eslint-disable-next-line
-      setTitle(todo?.title || "");
-      // eslint-disable-next-line
-      setDescription(todo?.description || "");
-    } else {
-      // Optional: reset on close? Or keep for reopening?
-      // Resetting is better for Create mode.
-      if (!todo) {
-        setTitle("");
-        setDescription("");
-      }
-    }
-  }, [isOpen, todo]);
+  // Initialize state from props. Parent should define `key` to reset state when todo changes.
+  const [title, setTitle] = useState(todo?.title || "");
+  const [description, setDescription] = useState(todo?.description || "");
 
   const handleSubmit = () => {
     onSave({ title, description });

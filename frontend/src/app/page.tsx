@@ -26,6 +26,7 @@ export default function Home() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTodo, setSelectedTodo] = useState<Todo | null>(null);
+  const [modalKey, setModalKey] = useState(0);
 
   // Mutations
   const createMutation = useMutation({
@@ -81,11 +82,13 @@ export default function Home() {
 
   const handleOpenCreate = () => {
     setSelectedTodo(null);
+    setModalKey((prev) => prev + 1);
     setIsModalOpen(true);
   };
 
   const handleOpenEdit = (todo: Todo) => {
     setSelectedTodo(todo);
+    setModalKey((prev) => prev + 1);
     setIsModalOpen(true);
   };
 
@@ -146,6 +149,7 @@ export default function Home() {
       </div>
 
       <TodoModal
+        key={modalKey}
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         todo={selectedTodo}
