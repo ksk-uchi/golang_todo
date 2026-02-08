@@ -1,7 +1,174 @@
+"use client";
+
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api";
+import { Todo } from "@/types";
+import { TodoItem } from "@/app/components/TodoItem";
+import { TodoModal } from "@/app/components/TodoModal";
+import { Button } from "@/app/components/ui/button";
+import { Plus } from "lucide-react";
+import { toast } from "sonner";
+import { useState } from "react";
+
 export default function Home() {
+  const queryClient = useQueryClient();
+  const {
+    data: todos,
+    isLoading,
+    error,
+  } = useQuery<Todo[]>({
+    queryKey: ["todos"],
+    queryFn: async () => {
+      const res = await api.get("/todo");
+      return res.data;
+    },
+  });
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedTodo, setSelectedTodo] = useState<Todo | null>(null);
+  const [modalKey, setModalKey] = useState(0);
+
+  const toastHandler = (message: string, type: "success" | "error") => {
+    if (type === "success") {
+      toast.success(message, {
+        duration: 6000,
+        position: "bottom-center",
+      });
+    } else {
+      toast.error(message, {
+        duration: 6000,
+        position: "top-center",
+      });
+    }
+  };
+  // Mutations
+  const createMutation = useMutation({
+    mutationFn: async (data: { title: string; description: string }) => {
+      const res = await api.post("/todo", data);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["todos"] });
+      setIsModalOpen(false);
+      toastHandler("Todo created successfully", "success");
+    },
+    onError: () => {
+      toastHandler("Failed to create todo", "error");
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({
+      id,
+      data,
+    }: {
+      id: number;
+      data: { title: string; description: string };
+    }) => {
+      const res = await api.patch(`/todo/${id}`, data);
+      return res.data;
+    },
+    onSuccess: (updatedTodo) => {
+      queryClient.invalidateQueries({ queryKey: ["todos"] });
+      // Update selected todo if currently viewing it to reflect changes (e.g. updated_at if displayed)
+      setSelectedTodo(updatedTodo);
+      // Modal stays open
+      toastHandler("Todo updated successfully", "success");
+    },
+    onError: () => {
+      toastHandler("Failed to update todo", "error");
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await api.delete(`/todo/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["todos"] });
+      toastHandler("Todo deleted successfully", "success");
+    },
+    onError: () => {
+      toastHandler("Failed to delete todo", "error");
+    },
+  });
+
+  const handleOpenCreate = () => {
+    setSelectedTodo(null);
+    setModalKey((prev) => prev + 1);
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEdit = (todo: Todo) => {
+    setSelectedTodo(todo);
+    setModalKey((prev) => prev + 1);
+    setIsModalOpen(true);
+  };
+
+  const handleSave = (data: { title: string; description: string }) => {
+    if (selectedTodo) {
+      updateMutation.mutate({ id: selectedTodo.id, data });
+    } else {
+      createMutation.mutate(data);
+    }
+  };
+
+  const handleDelete = (id: number) => {
+    deleteMutation.mutate(id);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center p-8">
+        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center p-8 text-destructive">
+        Failed to load todos
+      </div>
+    );
+  }
+
   return (
-    <h1 className="scroll-m-20 text-center text-4xl font-extrabold tracking-tight text-balance">
-      ToDo 一覧
-    </h1>
+    <div className="space-y-4 pb-20">
+      {todos && todos.length > 0 ? (
+        todos.map((todo) => (
+          <TodoItem
+            key={todo.id}
+            todo={todo}
+            onClick={handleOpenEdit}
+            onDelete={handleDelete}
+          />
+        ))
+      ) : (
+        <div className="text-center text-muted-foreground p-8">
+          No todos found. Add one!
+        </div>
+      )}
+
+      {/* FAB */}
+      <div className="fixed bottom-20 right-8 z-40">
+        <Button
+          size="icon"
+          className="h-14 w-14 rounded-full shadow-lg transition-transform hover:scale-110"
+          onClick={handleOpenCreate}
+        >
+          <Plus className="h-6 w-6" />
+        </Button>
+      </div>
+
+      <TodoModal
+        key={modalKey}
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        todo={selectedTodo}
+        onSave={handleSave}
+        isSaving={createMutation.isPending || updateMutation.isPending}
+      />
+    </div>
   );
 }
