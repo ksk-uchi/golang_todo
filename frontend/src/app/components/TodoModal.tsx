@@ -74,9 +74,6 @@ export function TodoModal({
           />
         </div>
         <DialogFooter>
-          <Button variant="secondary" onClick={onClose}>
-            Close
-          </Button>
           <Button onClick={handleSubmit} disabled={isSaving}>
             {isSaving ? "Saving..." : isEdit ? "Save" : "Create"}
           </Button>
