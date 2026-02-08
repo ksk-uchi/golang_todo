@@ -46,7 +46,39 @@ export default function RootLayout({
               </div>
             </main>
             <Footer />
-            <Toaster />
+            <Toaster
+              position="top-center"
+              toastOptions={{
+                className: "toaster-top",
+                style: {
+                  background: "var(--destructive)",
+                  color: "var(--destructive-foreground)",
+                  border: "none",
+                },
+                classNames: {
+                  success: "hidden",
+                  info: "hidden",
+                  warning: "hidden",
+                  loading: "hidden",
+                },
+              }}
+            />
+            <Toaster
+              position="bottom-center"
+              toastOptions={{
+                className: "toaster-bottom",
+                style: {
+                  background: "var(--chart-4)", // Green
+                  color: "var(--sidebar-primary-foreground)",
+                },
+                classNames: {
+                  error: "hidden",
+                  info: "hidden",
+                  warning: "hidden",
+                  loading: "hidden",
+                },
+              }}
+            />
           </ThemeProvider>
         </Providers>
       </body>
