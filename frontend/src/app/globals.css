@@ -125,3 +125,18 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Custom toast hiding logic */
+.toaster-top [data-type="success"],
+.toaster-top [data-type="info"],
+.toaster-top [data-type="warning"],
+.toaster-top [data-type="loading"] {
+  display: none !important;
+}
+
+.toaster-bottom [data-type="error"],
+.toaster-bottom [data-type="info"],
+.toaster-bottom [data-type="warning"],
+.toaster-bottom [data-type="loading"] {
+  display: none !important;
+}
