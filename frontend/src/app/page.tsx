@@ -28,6 +28,19 @@ export default function Home() {
   const [selectedTodo, setSelectedTodo] = useState<Todo | null>(null);
   const [modalKey, setModalKey] = useState(0);
 
+  const toastHandler = (message: string, type: "success" | "error") => {
+    if (type === "success") {
+      toast.success(message, {
+        duration: 6000,
+        position: "bottom-center",
+      });
+    } else {
+      toast.error(message, {
+        duration: 6000,
+        position: "top-center",
+      });
+    }
+  };
   // Mutations
   const createMutation = useMutation({
     mutationFn: async (data: { title: string; description: string }) => {
@@ -37,10 +50,10 @@ export default function Home() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["todos"] });
       setIsModalOpen(false);
-      toast.success("Todo created successfully", { duration: 6000 });
+      toastHandler("Todo created successfully", "success");
     },
     onError: () => {
-      toast.error("Failed to create todo", { duration: 6000 });
+      toastHandler("Failed to create todo", "error");
     },
   });
 
@@ -60,10 +73,10 @@ export default function Home() {
       // Update selected todo if currently viewing it to reflect changes (e.g. updated_at if displayed)
       setSelectedTodo(updatedTodo);
       // Modal stays open
-      toast.success("Todo updated successfully", { duration: 6000 });
+      toastHandler("Todo updated successfully", "success");
     },
     onError: () => {
-      toast.error("Failed to update todo", { duration: 6000 });
+      toastHandler("Failed to update todo", "error");
     },
   });
 
@@ -73,10 +86,10 @@ export default function Home() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["todos"] });
-      toast.success("Todo deleted successfully", { duration: 6000 });
+      toastHandler("Todo deleted successfully", "success");
     },
     onError: () => {
-      toast.error("Failed to delete todo", { duration: 6000 });
+      toastHandler("Failed to delete todo", "error");
     },
   });
 
