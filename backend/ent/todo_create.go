@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 	"todo-app/ent/todo"
+	"todo-app/ent/user"
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
@@ -82,10 +83,29 @@ func (_c *TodoCreate) SetNillableUpdatedAt(v *time.Time) *TodoCreate {
 	return _c
 }
 
+// SetUserID sets the "user_id" field.
+func (_c *TodoCreate) SetUserID(v int) *TodoCreate {
+	_c.mutation.SetUserID(v)
+	return _c
+}
+
+// SetNillableUserID sets the "user_id" field if the given value is not nil.
+func (_c *TodoCreate) SetNillableUserID(v *int) *TodoCreate {
+	if v != nil {
+		_c.SetUserID(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *TodoCreate) SetID(v int) *TodoCreate {
 	_c.mutation.SetID(v)
 	return _c
+}
+
+// SetUser sets the "user" edge to the User entity.
+func (_c *TodoCreate) SetUser(v *User) *TodoCreate {
+	return _c.SetUserID(v.ID)
 }
 
 // Mutation returns the TodoMutation object of the builder.
@@ -217,6 +237,23 @@ func (_c *TodoCreate) createSpec() (*Todo, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.UpdatedAt(); ok {
 		_spec.SetField(todo.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
+	}
+	if nodes := _c.mutation.UserIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   todo.UserTable,
+			Columns: []string{todo.UserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.UserID = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

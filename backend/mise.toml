@@ -4,6 +4,19 @@ atlas = "v1.0.0"
 go = "1.25.6"
 "go:github.com/google/wire/cmd/wire" = "0.7.0"
 
+[tasks.create-schema]
+usage = '''
+arg "<name>" help="This will be a struct name. (ex. User)"
+'''
+run = '''
+go run -mod=mod entgo.io/ent/cmd/ent new ${usage_name}
+'''
+
+[tasks.ent-gen]
+run = '''
+go generate ./ent
+'''
+
 [tasks.create-shadow-db]
 run = '''
 podman compose exec db -- mysql -u root --password=root_password -e "CREATE DATABASE todo_db_dev"
