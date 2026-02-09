@@ -27,6 +27,8 @@ func (r *TodoRepository) CreateTodo(title string, description string) (*ent.Todo
 	return r.client.Todo.Create().
 		SetTitle(title).
 		SetDescription(description).
+		// TODO: ログインユーザーのIDを取得するように変更する
+		SetUserID(1).
 		Save(r.ctx)
 }
 

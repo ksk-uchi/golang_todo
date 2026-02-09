@@ -34,6 +34,7 @@ func TestTodoHandler_ListTodo_Integration(t *testing.T) {
 			Description string
 			CreatedAt   time.Time
 		}
+		user := client.User.Create().SetName("test").SetEmail("test").SetPassword("test").SaveX(context.Background())
 		data := []dummyData{
 			{
 				Title:       "Test Title 1",
@@ -57,6 +58,7 @@ func TestTodoHandler_ListTodo_Integration(t *testing.T) {
 				SetTitle(d.Title).
 				SetDescription(d.Description).
 				SetCreatedAt(d.CreatedAt).
+				SetUser(user).
 				SaveX(context.Background())
 		}
 
@@ -87,6 +89,8 @@ func TestTodoHandler_CreateTodo_Integration(t *testing.T) {
 
 		app.Router.Setup(e)
 
+		// TODO: ログイン機能実装後に修正する
+		client.User.Create().SetName("test").SetEmail("test").SetPassword("test").SaveX(context.Background())
 		body := `{"title": "New Todo", "description": "New Description"}`
 		req := httptest.NewRequest(http.MethodPost, "/todo", strings.NewReader(body))
 		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
@@ -142,9 +146,11 @@ func TestTodoHandler_UpdateTodo_Integration(t *testing.T) {
 
 		app.Router.Setup(e)
 
+		user := client.User.Create().SetName("test").SetEmail("test").SetPassword("test").SaveX(context.Background())
 		todo := client.Todo.Create().
 			SetTitle("Old Title").
 			SetDescription("Old Description").
+			SetUser(user).
 			SaveX(context.Background())
 
 		body := `{"title": "Updated Title", "description": "Updated Description"}`
@@ -201,9 +207,11 @@ func TestTodoHandler_DeleteTodo_Integration(t *testing.T) {
 
 		app.Router.Setup(e)
 
+		user := client.User.Create().SetName("test").SetEmail("test").SetPassword("test").SaveX(context.Background())
 		todo := client.Todo.Create().
 			SetTitle("To Be Deleted").
 			SetDescription("Description").
+			SetUser(user).
 			SaveX(context.Background())
 
 		req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/todo/%d", todo.ID), nil)
