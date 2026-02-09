@@ -89,14 +89,6 @@ func (_c *TodoCreate) SetUserID(v int) *TodoCreate {
 	return _c
 }
 
-// SetNillableUserID sets the "user_id" field if the given value is not nil.
-func (_c *TodoCreate) SetNillableUserID(v *int) *TodoCreate {
-	if v != nil {
-		_c.SetUserID(*v)
-	}
-	return _c
-}
-
 // SetID sets the "id" field.
 func (_c *TodoCreate) SetID(v int) *TodoCreate {
 	_c.mutation.SetID(v)
@@ -181,10 +173,16 @@ func (_c *TodoCreate) check() error {
 	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "Todo.updated_at"`)}
 	}
+	if _, ok := _c.mutation.UserID(); !ok {
+		return &ValidationError{Name: "user_id", err: errors.New(`ent: missing required field "Todo.user_id"`)}
+	}
 	if v, ok := _c.mutation.ID(); ok {
 		if err := todo.IDValidator(v); err != nil {
 			return &ValidationError{Name: "id", err: fmt.Errorf(`ent: validator failed for field "Todo.id": %w`, err)}
 		}
+	}
+	if len(_c.mutation.UserIDs()) == 0 {
+		return &ValidationError{Name: "user", err: errors.New(`ent: missing required edge "Todo.user"`)}
 	}
 	return nil
 }
@@ -252,7 +250,7 @@ func (_c *TodoCreate) createSpec() (*Todo, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.UserID = &nodes[0]
+		_node.UserID = nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

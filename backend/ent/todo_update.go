@@ -111,12 +111,6 @@ func (_u *TodoUpdate) SetNillableUserID(v *int) *TodoUpdate {
 	return _u
 }
 
-// ClearUserID clears the value of the "user_id" field.
-func (_u *TodoUpdate) ClearUserID() *TodoUpdate {
-	_u.mutation.ClearUserID()
-	return _u
-}
-
 // SetUser sets the "user" edge to the User entity.
 func (_u *TodoUpdate) SetUser(v *User) *TodoUpdate {
 	return _u.SetUserID(v.ID)
@@ -180,6 +174,9 @@ func (_u *TodoUpdate) check() error {
 		if err := todo.DescriptionValidator(v); err != nil {
 			return &ValidationError{Name: "description", err: fmt.Errorf(`ent: validator failed for field "Todo.description": %w`, err)}
 		}
+	}
+	if _u.mutation.UserCleared() && len(_u.mutation.UserIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "Todo.user"`)
 	}
 	return nil
 }
@@ -345,12 +342,6 @@ func (_u *TodoUpdateOne) SetNillableUserID(v *int) *TodoUpdateOne {
 	return _u
 }
 
-// ClearUserID clears the value of the "user_id" field.
-func (_u *TodoUpdateOne) ClearUserID() *TodoUpdateOne {
-	_u.mutation.ClearUserID()
-	return _u
-}
-
 // SetUser sets the "user" edge to the User entity.
 func (_u *TodoUpdateOne) SetUser(v *User) *TodoUpdateOne {
 	return _u.SetUserID(v.ID)
@@ -427,6 +418,9 @@ func (_u *TodoUpdateOne) check() error {
 		if err := todo.DescriptionValidator(v); err != nil {
 			return &ValidationError{Name: "description", err: fmt.Errorf(`ent: validator failed for field "Todo.description": %w`, err)}
 		}
+	}
+	if _u.mutation.UserCleared() && len(_u.mutation.UserIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "Todo.user"`)
 	}
 	return nil
 }

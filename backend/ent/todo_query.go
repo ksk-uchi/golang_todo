@@ -405,10 +405,7 @@ func (_q *TodoQuery) loadUser(ctx context.Context, query *UserQuery, nodes []*To
 	ids := make([]int, 0, len(nodes))
 	nodeids := make(map[int][]*Todo)
 	for i := range nodes {
-		if nodes[i].UserID == nil {
-			continue
-		}
-		fk := *nodes[i].UserID
+		fk := nodes[i].UserID
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}

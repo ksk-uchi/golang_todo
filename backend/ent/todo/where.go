@@ -365,16 +365,6 @@ func UserIDNotIn(vs ...int) predicate.Todo {
 	return predicate.Todo(sql.FieldNotIn(FieldUserID, vs...))
 }
 
-// UserIDIsNil applies the IsNil predicate on the "user_id" field.
-func UserIDIsNil() predicate.Todo {
-	return predicate.Todo(sql.FieldIsNull(FieldUserID))
-}
-
-// UserIDNotNil applies the NotNil predicate on the "user_id" field.
-func UserIDNotNil() predicate.Todo {
-	return predicate.Todo(sql.FieldNotNull(FieldUserID))
-}
-
 // HasUser applies the HasEdge predicate on the "user" edge.
 func HasUser() predicate.Todo {
 	return predicate.Todo(func(s *sql.Selector) {

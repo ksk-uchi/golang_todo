@@ -362,7 +362,7 @@ func (m *TodoMutation) UserID() (r int, exists bool) {
 // OldUserID returns the old "user_id" field's value of the Todo entity.
 // If the Todo object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *TodoMutation) OldUserID(ctx context.Context) (v *int, err error) {
+func (m *TodoMutation) OldUserID(ctx context.Context) (v int, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldUserID is only allowed on UpdateOne operations")
 	}
@@ -376,22 +376,9 @@ func (m *TodoMutation) OldUserID(ctx context.Context) (v *int, err error) {
 	return oldValue.UserID, nil
 }
 
-// ClearUserID clears the value of the "user_id" field.
-func (m *TodoMutation) ClearUserID() {
-	m.user = nil
-	m.clearedFields[todo.FieldUserID] = struct{}{}
-}
-
-// UserIDCleared returns if the "user_id" field was cleared in this mutation.
-func (m *TodoMutation) UserIDCleared() bool {
-	_, ok := m.clearedFields[todo.FieldUserID]
-	return ok
-}
-
 // ResetUserID resets all changes to the "user_id" field.
 func (m *TodoMutation) ResetUserID() {
 	m.user = nil
-	delete(m.clearedFields, todo.FieldUserID)
 }
 
 // ClearUser clears the "user" edge to the User entity.
@@ -402,7 +389,7 @@ func (m *TodoMutation) ClearUser() {
 
 // UserCleared reports if the "user" edge to the User entity was cleared.
 func (m *TodoMutation) UserCleared() bool {
-	return m.UserIDCleared() || m.cleareduser
+	return m.cleareduser
 }
 
 // UserIDs returns the "user" edge IDs in the mutation.
@@ -602,9 +589,6 @@ func (m *TodoMutation) ClearedFields() []string {
 	if m.FieldCleared(todo.FieldDoneAt) {
 		fields = append(fields, todo.FieldDoneAt)
 	}
-	if m.FieldCleared(todo.FieldUserID) {
-		fields = append(fields, todo.FieldUserID)
-	}
 	return fields
 }
 
@@ -621,9 +605,6 @@ func (m *TodoMutation) ClearField(name string) error {
 	switch name {
 	case todo.FieldDoneAt:
 		m.ClearDoneAt()
-		return nil
-	case todo.FieldUserID:
-		m.ClearUserID()
 		return nil
 	}
 	return fmt.Errorf("unknown Todo nullable field %s", name)
