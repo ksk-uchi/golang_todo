@@ -10,6 +10,7 @@ require (
 	github.com/labstack/echo/v5 v5.0.1
 	github.com/mattn/go-sqlite3 v1.14.17
 	github.com/stretchr/testify v1.11.1
+	golang.org/x/crypto v0.46.0
 )
 
 require (
@@ -32,7 +33,6 @@ require (
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/zclconf/go-cty v1.14.4 // indirect
 	github.com/zclconf/go-cty-yaml v1.1.0 // indirect
-	golang.org/x/crypto v0.46.0 // indirect
 	golang.org/x/mod v0.31.0 // indirect
 	golang.org/x/sys v0.39.0 // indirect
 	golang.org/x/text v0.33.0 // indirect
