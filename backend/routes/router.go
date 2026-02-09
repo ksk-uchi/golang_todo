@@ -7,14 +7,16 @@ import (
 	"github.com/labstack/echo/v5/middleware"
 )
 
-func NewRouter(todoR *TodoRouter) *Router {
+func NewRouter(todoR *TodoRouter, authR *AuthRouter) *Router {
 	return &Router{
 		todo: todoR,
+		auth: authR,
 	}
 }
 
 type Router struct {
 	todo *TodoRouter
+	auth *AuthRouter
 }
 
 func (r *Router) Setup(e *echo.Echo) {
@@ -38,4 +40,5 @@ func (r *Router) Setup(e *echo.Echo) {
 		AllowCredentials: true,
 	}))
 	r.todo.SetupTodoRoute(e.Group("/todo"))
+	r.auth.SetupAuthRoute(e.Group("/auth"))
 }
