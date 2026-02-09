@@ -12,11 +12,23 @@ import (
 	"todo-app/di"
 	"todo-app/dto"
 	"todo-app/ent/enttest"
+	"todo-app/ent/todo"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v5"
 	_ "github.com/mattn/go-sqlite3" // テスト実行にドライバが必要
 	"github.com/stretchr/testify/assert"
 )
+
+func createToken(t *testing.T, userID int) string {
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"user_id": float64(userID), // jwt deserializes numbers as float64
+		"exp":     time.Now().Add(time.Hour).Unix(),
+	})
+	tokenString, err := token.SignedString([]byte("secret"))
+	assert.NoError(t, err)
+	return tokenString
+}
 
 func TestTodoHandler_ListTodo_Integration(t *testing.T) {
 	t.Run("Todo 一覧取得", func(t *testing.T) {
@@ -63,6 +75,8 @@ func TestTodoHandler_ListTodo_Integration(t *testing.T) {
 		}
 
 		req := httptest.NewRequest(http.MethodGet, "/todo", nil)
+		cookie := &http.Cookie{Name: "token", Value: createToken(t, user.ID)}
+		req.AddCookie(cookie)
 		rec := httptest.NewRecorder()
 
 		e.ServeHTTP(rec, req)
@@ -89,11 +103,12 @@ func TestTodoHandler_CreateTodo_Integration(t *testing.T) {
 
 		app.Router.Setup(e)
 
-		// TODO: ログイン機能実装後に修正する
-		client.User.Create().SetName("test").SetEmail("test").SetPassword("test").SaveX(context.Background())
+		user := client.User.Create().SetName("test").SetEmail("test").SetPassword("test").SaveX(context.Background())
 		body := `{"title": "New Todo", "description": "New Description"}`
 		req := httptest.NewRequest(http.MethodPost, "/todo", strings.NewReader(body))
 		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		cookie := &http.Cookie{Name: "token", Value: createToken(t, user.ID)}
+		req.AddCookie(cookie)
 		rec := httptest.NewRecorder()
 
 		e.ServeHTTP(rec, req)
@@ -120,10 +135,13 @@ func TestTodoHandler_CreateTodo_Integration(t *testing.T) {
 		assert.NoError(t, err)
 
 		app.Router.Setup(e)
+		user := client.User.Create().SetName("test").SetEmail("test").SetPassword("test").SaveX(context.Background())
 
 		body := `{"title": "", "description": "New Description"}`
 		req := httptest.NewRequest(http.MethodPost, "/todo", strings.NewReader(body))
 		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		cookie := &http.Cookie{Name: "token", Value: createToken(t, user.ID)}
+		req.AddCookie(cookie)
 		rec := httptest.NewRecorder()
 
 		e.ServeHTTP(rec, req)
@@ -132,6 +150,28 @@ func TestTodoHandler_CreateTodo_Integration(t *testing.T) {
 
 		expected := `{"error":{"title":"タイトルは必須です"}}`
 		assert.JSONEq(t, expected, rec.Body.String())
+	})
+
+	t.Run("Todo 新規作成 未認証", func(t *testing.T) {
+		client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
+		defer client.Close()
+
+		e := echo.New()
+		app, err := di.InitializeTestApp(e, client)
+		assert.NoError(t, err)
+
+		app.Router.Setup(e)
+
+		body := `{"title": "New Todo", "description": "New Description"}`
+		req := httptest.NewRequest(http.MethodPost, "/todo", strings.NewReader(body))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		// No cookie
+		rec := httptest.NewRecorder()
+
+		e.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusUnauthorized, rec.Code)
+		assert.JSONEq(t, `{"error":"missing token"}`, rec.Body.String())
 	})
 }
 
@@ -157,6 +197,8 @@ func TestTodoHandler_UpdateTodo_Integration(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPatch, "/todo/1", strings.NewReader(body)) // Assuming ID 1
 
 		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		cookie := &http.Cookie{Name: "token", Value: createToken(t, user.ID)}
+		req.AddCookie(cookie)
 		rec := httptest.NewRecorder()
 
 		e.ServeHTTP(rec, req)
@@ -184,14 +226,50 @@ func TestTodoHandler_UpdateTodo_Integration(t *testing.T) {
 		assert.NoError(t, err)
 
 		app.Router.Setup(e)
+		user := client.User.Create().SetName("test").SetEmail("test").SetPassword("test").SaveX(context.Background())
 
 		body := `{"title": "Updated Title"}`
 		req := httptest.NewRequest(http.MethodPatch, "/todo/999", strings.NewReader(body))
 		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		cookie := &http.Cookie{Name: "token", Value: createToken(t, user.ID)}
+		req.AddCookie(cookie)
 		rec := httptest.NewRecorder()
 
 		e.ServeHTTP(rec, req)
 
+		assert.Equal(t, http.StatusNotFound, rec.Code)
+	})
+
+	t.Run("Todo 更新 他人のTodo", func(t *testing.T) {
+		client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
+		defer client.Close()
+
+		e := echo.New()
+		app, err := di.InitializeTestApp(e, client)
+		assert.NoError(t, err)
+
+		app.Router.Setup(e)
+
+		user1 := client.User.Create().SetName("user1").SetEmail("user1").SetPassword("user1").SaveX(context.Background())
+		user2 := client.User.Create().SetName("user2").SetEmail("user2").SetPassword("user2").SaveX(context.Background())
+
+		todo := client.Todo.Create().
+			SetTitle("User1 Todo").
+			SetDescription("User1 Description").
+			SetUser(user1).
+			SaveX(context.Background())
+
+		body := `{"title": "Updated Title"}`
+		req := httptest.NewRequest(http.MethodPatch, fmt.Sprintf("/todo/%d", todo.ID), strings.NewReader(body))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		// Login as user2
+		cookie := &http.Cookie{Name: "token", Value: createToken(t, user2.ID)}
+		req.AddCookie(cookie)
+		rec := httptest.NewRecorder()
+
+		e.ServeHTTP(rec, req)
+
+		// Expect Not Found because repository filters by user
 		assert.Equal(t, http.StatusNotFound, rec.Code)
 	})
 }
@@ -215,6 +293,8 @@ func TestTodoHandler_DeleteTodo_Integration(t *testing.T) {
 			SaveX(context.Background())
 
 		req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/todo/%d", todo.ID), nil)
+		cookie := &http.Cookie{Name: "token", Value: createToken(t, user.ID)}
+		req.AddCookie(cookie)
 		rec := httptest.NewRecorder()
 
 		e.ServeHTTP(rec, req)
@@ -236,12 +316,58 @@ func TestTodoHandler_DeleteTodo_Integration(t *testing.T) {
 		assert.NoError(t, err)
 
 		app.Router.Setup(e)
+		user := client.User.Create().SetName("test").SetEmail("test").SetPassword("test").SaveX(context.Background())
 
 		req := httptest.NewRequest(http.MethodDelete, "/todo/999", nil)
+		cookie := &http.Cookie{Name: "token", Value: createToken(t, user.ID)}
+		req.AddCookie(cookie)
 		rec := httptest.NewRecorder()
 
 		e.ServeHTTP(rec, req)
 
 		assert.Equal(t, http.StatusNoContent, rec.Code)
+	})
+
+	t.Run("Todo 削除 他人のTodo", func(t *testing.T) {
+		client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
+		defer client.Close()
+
+		e := echo.New()
+		app, err := di.InitializeTestApp(e, client)
+		assert.NoError(t, err)
+
+		app.Router.Setup(e)
+
+		user1 := client.User.Create().SetName("user1").SetEmail("user1").SetPassword("user1").SaveX(context.Background())
+		user2 := client.User.Create().SetName("user2").SetEmail("user2").SetPassword("user2").SaveX(context.Background())
+
+		targetTodo := client.Todo.Create().
+			SetTitle("To Be Deleted").
+			SetDescription("Description").
+			SetUser(user1).
+			SaveX(context.Background())
+
+		req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/todo/%d", targetTodo.ID), nil)
+		// Login as user2
+		cookie := &http.Cookie{Name: "token", Value: createToken(t, user2.ID)}
+		req.AddCookie(cookie)
+		rec := httptest.NewRecorder()
+
+		e.ServeHTTP(rec, req)
+
+		// Expect Not Found (No Content because delete is idempotent/safe if not found generally, but here returns 404 from repo for not found)
+		// Wait, DeleteTodo implementation:
+		// if n == 0 { return &ent.NotFoundError{} }
+		// And handler returns No Content if IsNotFound.
+		// So it should still be No Content even if I try to delete other's todo, effectively masking the existence.
+		// OR if I want to be strict, I should return 404.
+		// Repository returns NotFoundError if ownership match fails (WHERE user_id = ...).
+		// Handler catches NotFoundError and returns NoContent (line 153 in handlers/todo.go).
+		// So checking for StatusNoContent is correct.
+		assert.Equal(t, http.StatusNoContent, rec.Code)
+
+		// Ensure it was NOT deleted
+		exists := client.Todo.Query().Where(todo.ID(targetTodo.ID)).ExistX(context.Background())
+		assert.True(t, exists)
 	})
 }
