@@ -22,17 +22,17 @@ func (Todo) Fields() []ent.Field {
 		field.Time("done_at").Optional().Nillable(),
 		field.Time("created_at").Default(time.Now),
 		field.Time("updated_at").Default(time.Now).UpdateDefault(time.Now),
-		field.Int("user_id").Optional().Nillable(),
+		field.Int("user_id"),
 	}
 }
 
-// Edges of the Todo.
 // Edges of the Todo.
 func (Todo) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("user", User.Type).
 			Ref("todos").
 			Unique().
-			Field("user_id"),
+			Field("user_id").
+			Required(),
 	}
 }
