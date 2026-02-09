@@ -11,6 +11,7 @@ import (
 	"github.com/labstack/echo/v5"
 	"todo-app/ent"
 	"todo-app/handlers"
+	"todo-app/middleware"
 	"todo-app/providers"
 	"todo-app/repositories"
 	"todo-app/routes"
@@ -33,7 +34,8 @@ func InitializeApp() (*App, func(), error) {
 	authService := services.NewAuthService(userRepository)
 	authHandler := handlers.NewAuthHandler(authService)
 	authRouter := routes.NewAuthRouter(authHandler)
-	router := routes.NewRouter(todoRouter, authRouter)
+	authMiddleware := middleware.NewAuthMiddleware(userRepository)
+	router := routes.NewRouter(todoRouter, authRouter, authMiddleware)
 	app := NewApp(echoEcho, router)
 	return app, func() {
 		cleanup()
@@ -49,7 +51,8 @@ func InitializeTestApp(e *echo.Echo, client *ent.Client) (*App, error) {
 	authService := services.NewAuthService(userRepository)
 	authHandler := handlers.NewAuthHandler(authService)
 	authRouter := routes.NewAuthRouter(authHandler)
-	router := routes.NewRouter(todoRouter, authRouter)
+	authMiddleware := middleware.NewAuthMiddleware(userRepository)
+	router := routes.NewRouter(todoRouter, authRouter, authMiddleware)
 	app := NewApp(e, router)
 	return app, nil
 }
@@ -60,7 +63,7 @@ func InitializeTestApp(e *echo.Echo, client *ent.Client) (*App, error) {
 var todoSet = wire.NewSet(handlers.NewTodoHandler, routes.NewTodoRouter, services.ProvideTodoServiceFactory)
 
 // auth
-var authSet = wire.NewSet(repositories.NewUserRepository, wire.Bind(new(repositories.IUserRepository), new(*repositories.UserRepository)), services.NewAuthService, wire.Bind(new(services.IAuthService), new(*services.AuthService)), handlers.NewAuthHandler, routes.NewAuthRouter)
+var authSet = wire.NewSet(repositories.NewUserRepository, wire.Bind(new(repositories.IUserRepository), new(*repositories.UserRepository)), services.NewAuthService, wire.Bind(new(services.IAuthService), new(*services.AuthService)), handlers.NewAuthHandler, routes.NewAuthRouter, middleware.NewAuthMiddleware)
 
 // app
 var appSet = wire.NewSet(providers.NewEntClient, routes.NewRouter, NewLogger, echo.New, NewApp)

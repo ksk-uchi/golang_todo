@@ -8,6 +8,7 @@ import (
 
 type IUserRepository interface {
 	FindByEmail(ctx context.Context, email string) (*ent.User, error)
+	FindById(ctx context.Context, id int) (*ent.User, error)
 }
 
 type UserRepository struct {
@@ -22,4 +23,8 @@ func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*ent.Us
 	return r.client.User.Query().
 		Where(user.EmailEQ(email)).
 		Only(ctx)
+}
+
+func (r *UserRepository) FindById(ctx context.Context, id int) (*ent.User, error) {
+	return r.client.User.Get(ctx, id)
 }

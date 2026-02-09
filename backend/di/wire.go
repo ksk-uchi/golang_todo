@@ -6,6 +6,7 @@ package di
 import (
 	"todo-app/ent"
 	"todo-app/handlers"
+	"todo-app/middleware"
 	"todo-app/providers"
 	"todo-app/repositories"
 	"todo-app/routes"
@@ -30,6 +31,7 @@ var authSet = wire.NewSet(
 	wire.Bind(new(services.IAuthService), new(*services.AuthService)),
 	handlers.NewAuthHandler,
 	routes.NewAuthRouter,
+	middleware.NewAuthMiddleware,
 )
 
 // app

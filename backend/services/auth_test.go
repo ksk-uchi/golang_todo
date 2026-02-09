@@ -24,6 +24,14 @@ func (m *MockUserRepository) FindByEmail(ctx context.Context, email string) (*en
 	return args.Get(0).(*ent.User), args.Error(1)
 }
 
+func (m *MockUserRepository) FindById(ctx context.Context, id int) (*ent.User, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*ent.User), args.Error(1)
+}
+
 func TestAuthService_Login(t *testing.T) {
 	password := "password123"
 	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
