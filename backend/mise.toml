@@ -4,6 +4,9 @@ atlas = "v1.0.0"
 go = "1.25.6"
 "go:github.com/google/wire/cmd/wire" = "0.7.0"
 
+[env]
+APP_ENV = "local"
+
 [tasks.create-schema]
 usage = '''
 arg "<name>" help="This will be a struct name. (ex. User)"
