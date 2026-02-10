@@ -8,8 +8,6 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"time"
-
 	"todo-app/dto"
 
 	"github.com/labstack/echo/v5"
@@ -94,7 +92,6 @@ func TestAuthHandler_Login(t *testing.T) {
 						assert.Equal(t, tt.mockToken, cookie.Value)
 						assert.True(t, cookie.HttpOnly)
 						assert.Equal(t, http.SameSiteStrictMode, cookie.SameSite)
-						assert.WithinDuration(t, time.Now().Add(time.Hour), cookie.Expires, time.Minute)
 						found = true
 						break
 					}

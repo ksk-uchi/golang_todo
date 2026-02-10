@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"net/http"
-	"time"
 
 	"todo-app/dto"
 	"todo-app/services"
@@ -45,7 +44,6 @@ func (h *AuthHandler) Login(c *echo.Context) error {
 	cookie.Path = "/"
 	cookie.HttpOnly = true
 	cookie.SameSite = http.SameSiteStrictMode
-	cookie.Expires = time.Now().Add(time.Hour)
 
 	c.SetCookie(cookie)
 

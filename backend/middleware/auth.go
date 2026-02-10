@@ -84,7 +84,7 @@ func (m *AuthMiddleware) Authenticate(next echo.HandlerFunc) echo.HandlerFunc {
 			newCookie.Path = "/"
 			newCookie.HttpOnly = true
 			newCookie.SameSite = http.SameSiteStrictMode
-			newCookie.Expires = time.Now().Add(time.Hour)
+			newCookie.SameSite = http.SameSiteStrictMode
 			c.SetCookie(newCookie)
 		}
 
