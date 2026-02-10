@@ -12,11 +12,40 @@ import (
 	"todo-app/di"
 	"todo-app/dto"
 	"todo-app/ent/enttest"
+	"todo-app/ent/todo"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v5"
 	_ "github.com/mattn/go-sqlite3" // テスト実行にドライバが必要
 	"github.com/stretchr/testify/assert"
 )
+
+func createToken(t *testing.T, userID int) string {
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"user_id": float64(userID), // jwt deserializes numbers as float64
+		"exp":     time.Now().Add(time.Hour).Unix(),
+	})
+	tokenString, err := token.SignedString([]byte("secret"))
+	assert.NoError(t, err)
+	return tokenString
+}
+
+func createAuthenticatedRequest(t *testing.T, method, target, body string, userID int) (*http.Request, *httptest.ResponseRecorder) {
+	var req *http.Request
+	if body != "" {
+		req = httptest.NewRequest(method, target, strings.NewReader(body))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	} else {
+		req = httptest.NewRequest(method, target, nil)
+	}
+
+	if userID != 0 {
+		cookie := &http.Cookie{Name: "token", Value: createToken(t, userID)}
+		req.AddCookie(cookie)
+	}
+	rec := httptest.NewRecorder()
+	return req, rec
+}
 
 func TestTodoHandler_ListTodo_Integration(t *testing.T) {
 	t.Run("Todo 一覧取得", func(t *testing.T) {
@@ -62,9 +91,7 @@ func TestTodoHandler_ListTodo_Integration(t *testing.T) {
 				SaveX(context.Background())
 		}
 
-		req := httptest.NewRequest(http.MethodGet, "/todo", nil)
-		rec := httptest.NewRecorder()
-
+		req, rec := createAuthenticatedRequest(t, http.MethodGet, "/todo", "", user.ID)
 		e.ServeHTTP(rec, req)
 
 		assert.Equal(t, http.StatusOK, rec.Code)
@@ -89,13 +116,10 @@ func TestTodoHandler_CreateTodo_Integration(t *testing.T) {
 
 		app.Router.Setup(e)
 
-		// TODO: ログイン機能実装後に修正する
-		client.User.Create().SetName("test").SetEmail("test").SetPassword("test").SaveX(context.Background())
+		user := client.User.Create().SetName("test").SetEmail("test").SetPassword("test").SaveX(context.Background())
 		body := `{"title": "New Todo", "description": "New Description"}`
-		req := httptest.NewRequest(http.MethodPost, "/todo", strings.NewReader(body))
-		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-		rec := httptest.NewRecorder()
 
+		req, rec := createAuthenticatedRequest(t, http.MethodPost, "/todo", body, user.ID)
 		e.ServeHTTP(rec, req)
 
 		assert.Equal(t, http.StatusCreated, rec.Code)
@@ -120,18 +144,36 @@ func TestTodoHandler_CreateTodo_Integration(t *testing.T) {
 		assert.NoError(t, err)
 
 		app.Router.Setup(e)
+		user := client.User.Create().SetName("test").SetEmail("test").SetPassword("test").SaveX(context.Background())
 
 		body := `{"title": "", "description": "New Description"}`
-		req := httptest.NewRequest(http.MethodPost, "/todo", strings.NewReader(body))
-		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-		rec := httptest.NewRecorder()
 
+		req, rec := createAuthenticatedRequest(t, http.MethodPost, "/todo", body, user.ID)
 		e.ServeHTTP(rec, req)
 
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
 
 		expected := `{"error":{"title":"タイトルは必須です"}}`
 		assert.JSONEq(t, expected, rec.Body.String())
+	})
+
+	t.Run("Todo 新規作成 未認証", func(t *testing.T) {
+		client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
+		defer client.Close()
+
+		e := echo.New()
+		app, err := di.InitializeTestApp(e, client)
+		assert.NoError(t, err)
+
+		app.Router.Setup(e)
+
+		body := `{"title": "New Todo", "description": "New Description"}`
+
+		req, rec := createAuthenticatedRequest(t, http.MethodPost, "/todo", body, 0)
+		e.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusUnauthorized, rec.Code)
+		assert.JSONEq(t, `{"error":"missing token"}`, rec.Body.String())
 	})
 }
 
@@ -154,11 +196,8 @@ func TestTodoHandler_UpdateTodo_Integration(t *testing.T) {
 			SaveX(context.Background())
 
 		body := `{"title": "Updated Title", "description": "Updated Description"}`
-		req := httptest.NewRequest(http.MethodPatch, "/todo/1", strings.NewReader(body)) // Assuming ID 1
 
-		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-		rec := httptest.NewRecorder()
-
+		req, rec := createAuthenticatedRequest(t, http.MethodPatch, fmt.Sprintf("/todo/%d", todo.ID), body, user.ID)
 		e.ServeHTTP(rec, req)
 
 		assert.Equal(t, http.StatusOK, rec.Code)
@@ -184,14 +223,41 @@ func TestTodoHandler_UpdateTodo_Integration(t *testing.T) {
 		assert.NoError(t, err)
 
 		app.Router.Setup(e)
+		user := client.User.Create().SetName("test").SetEmail("test").SetPassword("test").SaveX(context.Background())
 
 		body := `{"title": "Updated Title"}`
-		req := httptest.NewRequest(http.MethodPatch, "/todo/999", strings.NewReader(body))
-		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-		rec := httptest.NewRecorder()
 
+		req, rec := createAuthenticatedRequest(t, http.MethodPatch, "/todo/999", body, user.ID)
 		e.ServeHTTP(rec, req)
 
+		assert.Equal(t, http.StatusNotFound, rec.Code)
+	})
+
+	t.Run("Todo 更新 他人のTodo", func(t *testing.T) {
+		client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
+		defer client.Close()
+
+		e := echo.New()
+		app, err := di.InitializeTestApp(e, client)
+		assert.NoError(t, err)
+
+		app.Router.Setup(e)
+
+		user1 := client.User.Create().SetName("user1").SetEmail("user1").SetPassword("user1").SaveX(context.Background())
+		user2 := client.User.Create().SetName("user2").SetEmail("user2").SetPassword("user2").SaveX(context.Background())
+
+		todo := client.Todo.Create().
+			SetTitle("User1 Todo").
+			SetDescription("User1 Description").
+			SetUser(user1).
+			SaveX(context.Background())
+
+		body := `{"title": "Updated Title"}`
+
+		req, rec := createAuthenticatedRequest(t, http.MethodPatch, fmt.Sprintf("/todo/%d", todo.ID), body, user2.ID)
+		e.ServeHTTP(rec, req)
+
+		// Expect Not Found because repository filters by user
 		assert.Equal(t, http.StatusNotFound, rec.Code)
 	})
 }
@@ -214,9 +280,7 @@ func TestTodoHandler_DeleteTodo_Integration(t *testing.T) {
 			SetUser(user).
 			SaveX(context.Background())
 
-		req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/todo/%d", todo.ID), nil)
-		rec := httptest.NewRecorder()
-
+		req, rec := createAuthenticatedRequest(t, http.MethodDelete, fmt.Sprintf("/todo/%d", todo.ID), "", user.ID)
 		e.ServeHTTP(rec, req)
 
 		assert.Equal(t, http.StatusNoContent, rec.Code)
@@ -236,12 +300,40 @@ func TestTodoHandler_DeleteTodo_Integration(t *testing.T) {
 		assert.NoError(t, err)
 
 		app.Router.Setup(e)
+		user := client.User.Create().SetName("test").SetEmail("test").SetPassword("test").SaveX(context.Background())
 
-		req := httptest.NewRequest(http.MethodDelete, "/todo/999", nil)
-		rec := httptest.NewRecorder()
-
+		req, rec := createAuthenticatedRequest(t, http.MethodDelete, "/todo/999", "", user.ID)
 		e.ServeHTTP(rec, req)
 
 		assert.Equal(t, http.StatusNoContent, rec.Code)
+	})
+
+	t.Run("Todo 削除 他人のTodo", func(t *testing.T) {
+		client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
+		defer client.Close()
+
+		e := echo.New()
+		app, err := di.InitializeTestApp(e, client)
+		assert.NoError(t, err)
+
+		app.Router.Setup(e)
+
+		user1 := client.User.Create().SetName("user1").SetEmail("user1").SetPassword("user1").SaveX(context.Background())
+		user2 := client.User.Create().SetName("user2").SetEmail("user2").SetPassword("user2").SaveX(context.Background())
+
+		targetTodo := client.Todo.Create().
+			SetTitle("To Be Deleted").
+			SetDescription("Description").
+			SetUser(user1).
+			SaveX(context.Background())
+
+		req, rec := createAuthenticatedRequest(t, http.MethodDelete, fmt.Sprintf("/todo/%d", targetTodo.ID), "", user2.ID)
+		e.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusNoContent, rec.Code)
+
+		// Ensure it was NOT deleted
+		exists := client.Todo.Query().Where(todo.ID(targetTodo.ID)).ExistX(context.Background())
+		assert.True(t, exists)
 	})
 }

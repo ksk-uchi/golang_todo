@@ -11,7 +11,9 @@ import (
 	"github.com/labstack/echo/v5"
 	"todo-app/ent"
 	"todo-app/handlers"
+	"todo-app/middleware"
 	"todo-app/providers"
+	"todo-app/repositories"
 	"todo-app/routes"
 	"todo-app/services"
 )
@@ -28,7 +30,12 @@ func InitializeApp() (*App, func(), error) {
 	todoServiceFactory := services.ProvideTodoServiceFactory()
 	todoHandler := handlers.NewTodoHandler(logger, client, todoServiceFactory)
 	todoRouter := routes.NewTodoRouter(todoHandler)
-	router := routes.NewRouter(todoRouter)
+	userRepository := repositories.NewUserRepository(client)
+	authService := services.NewAuthService(userRepository)
+	authHandler := handlers.NewAuthHandler(authService)
+	authRouter := routes.NewAuthRouter(authHandler)
+	authMiddleware := middleware.NewAuthMiddleware(userRepository)
+	router := routes.NewRouter(todoRouter, authRouter, authMiddleware)
 	app := NewApp(echoEcho, router)
 	return app, func() {
 		cleanup()
@@ -40,7 +47,12 @@ func InitializeTestApp(e *echo.Echo, client *ent.Client) (*App, error) {
 	todoServiceFactory := services.ProvideTodoServiceFactory()
 	todoHandler := handlers.NewTodoHandler(logger, client, todoServiceFactory)
 	todoRouter := routes.NewTodoRouter(todoHandler)
-	router := routes.NewRouter(todoRouter)
+	userRepository := repositories.NewUserRepository(client)
+	authService := services.NewAuthService(userRepository)
+	authHandler := handlers.NewAuthHandler(authService)
+	authRouter := routes.NewAuthRouter(authHandler)
+	authMiddleware := middleware.NewAuthMiddleware(userRepository)
+	router := routes.NewRouter(todoRouter, authRouter, authMiddleware)
 	app := NewApp(e, router)
 	return app, nil
 }
@@ -49,6 +61,9 @@ func InitializeTestApp(e *echo.Echo, client *ent.Client) (*App, error) {
 
 // todo
 var todoSet = wire.NewSet(handlers.NewTodoHandler, routes.NewTodoRouter, services.ProvideTodoServiceFactory)
+
+// auth
+var authSet = wire.NewSet(repositories.NewUserRepository, wire.Bind(new(repositories.IUserRepository), new(*repositories.UserRepository)), services.NewAuthService, wire.Bind(new(services.IAuthService), new(*services.AuthService)), handlers.NewAuthHandler, routes.NewAuthRouter, middleware.NewAuthMiddleware)
 
 // app
 var appSet = wire.NewSet(providers.NewEntClient, routes.NewRouter, NewLogger, echo.New, NewApp)

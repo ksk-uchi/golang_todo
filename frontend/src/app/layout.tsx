@@ -40,8 +40,8 @@ export default function RootLayout({
             disableTransitionOnChange
           >
             <Header />
-            <main className="flex-1 overflow-y-auto">
-              <div className="container mx-auto px-4 py-8 max-w-2xl">
+            <main className="flex-1 overflow-y-auto flex flex-col">
+              <div className="container mx-auto px-4 py-8 max-w-2xl flex-1 flex flex-col">
                 {children}
               </div>
             </main>
