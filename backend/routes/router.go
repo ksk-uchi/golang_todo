@@ -2,6 +2,7 @@ package routes
 
 import (
 	"net/http"
+	"os"
 	"todo-app/middleware"
 
 	"github.com/labstack/echo/v5"
@@ -51,6 +52,7 @@ func (r *Router) Setup(e *echo.Echo) {
 	}
 	e.Use(echoMiddleware.CSRFWithConfig(echoMiddleware.CSRFConfig{
 		Skipper:        skipper,
+		TrustedOrigins: []string{os.Getenv("FRONTEND_ORIGIN")},
 		TokenLookup:    "header:X-CSRF-Token",
 		CookieName:     "csrf_token",
 		CookiePath:     "/",

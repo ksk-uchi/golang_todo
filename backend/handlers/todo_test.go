@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -15,10 +16,20 @@ import (
 	"todo-app/ent/todo"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v5"
 	_ "github.com/mattn/go-sqlite3" // テスト実行にドライバが必要
 	"github.com/stretchr/testify/assert"
 )
+
+func TestMain(m *testing.M) {
+	if err := godotenv.Load("../envs/test.env"); err != nil {
+		fmt.Println("Error loading .env file:", err)
+		os.Exit(1)
+	}
+	code := m.Run()
+	os.Exit(code)
+}
 
 type avoidCSRF struct{}
 
