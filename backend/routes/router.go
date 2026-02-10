@@ -43,8 +43,18 @@ func (r *Router) Setup(e *echo.Echo) {
 		AllowCredentials: true,
 	}))
 
-	e.Use(r.authM.Authenticate)
-
-	r.todo.SetupTodoRoute(e.Group("/todo"))
 	r.auth.SetupAuthRoute(e.Group("/auth"))
+
+	e.Use(r.authM.Authenticate)
+	skipper := func(c *echo.Context) bool {
+		return c.Request().URL.Path == "/auth/login"
+	}
+	e.Use(echoMiddleware.CSRFWithConfig(echoMiddleware.CSRFConfig{
+		Skipper:        skipper,
+		TokenLookup:    "header:X-CSRF-Token",
+		CookieName:     "csrf_token",
+		CookiePath:     "/",
+		CookieSameSite: http.SameSiteStrictMode,
+	}))
+	r.todo.SetupTodoRoute(e.Group("/todo"))
 }

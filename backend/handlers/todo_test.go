@@ -20,6 +20,17 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type avoidCSRF struct{}
+
+func (a avoidCSRF) SetCSRFCookie(req *http.Request) {
+	cookie := &http.Cookie{Name: "csrf_token", Value: "test"}
+	req.AddCookie(cookie)
+}
+
+func (a avoidCSRF) SetCSRFHeader(req *http.Request) {
+	req.Header.Set("X-CSRF-Token", "test")
+}
+
 func createToken(t *testing.T, userID int) string {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user_id": float64(userID), // jwt deserializes numbers as float64
@@ -38,11 +49,15 @@ func createAuthenticatedRequest(t *testing.T, method, target, body string, userI
 	} else {
 		req = httptest.NewRequest(method, target, nil)
 	}
-
 	if userID != 0 {
 		cookie := &http.Cookie{Name: "token", Value: createToken(t, userID)}
 		req.AddCookie(cookie)
 	}
+
+	csrf := avoidCSRF{}
+	csrf.SetCSRFCookie(req)
+	csrf.SetCSRFHeader(req)
+
 	rec := httptest.NewRecorder()
 	return req, rec
 }
