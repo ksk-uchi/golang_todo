@@ -197,7 +197,7 @@ func TestTodoHandler_UpdateTodo_Integration(t *testing.T) {
 
 		body := `{"title": "Updated Title", "description": "Updated Description"}`
 
-		req, rec := createAuthenticatedRequest(t, http.MethodPatch, "/todo/1", body, user.ID) // Assuming ID 1
+		req, rec := createAuthenticatedRequest(t, http.MethodPatch, fmt.Sprintf("/todo/%d", todo.ID), body, user.ID)
 		e.ServeHTTP(rec, req)
 
 		assert.Equal(t, http.StatusOK, rec.Code)
