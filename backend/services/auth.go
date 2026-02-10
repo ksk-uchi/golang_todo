@@ -15,7 +15,7 @@ import (
 )
 
 type IAuthService interface {
-	Login(ctx context.Context, req *dto.LoginRequest) (string, error)
+	Login(ctx context.Context, req *dto.LoginInput) (string, error)
 }
 
 type AuthService struct {
@@ -26,7 +26,7 @@ func NewAuthService(repo repositories.IUserRepository) *AuthService {
 	return &AuthService{repo: repo}
 }
 
-func (s *AuthService) Login(ctx context.Context, req *dto.LoginRequest) (string, error) {
+func (s *AuthService) Login(ctx context.Context, req *dto.LoginInput) (string, error) {
 	u, err := s.repo.FindByEmail(ctx, req.Email)
 	if err != nil {
 		if ent.IsNotFound(err) {

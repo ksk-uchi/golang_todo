@@ -6,6 +6,7 @@ import (
 
 	"todo-app/dto"
 	"todo-app/services"
+	"todo-app/validators"
 
 	"github.com/labstack/echo/v5"
 )
@@ -19,12 +20,21 @@ func NewAuthHandler(service services.IAuthService) *AuthHandler {
 }
 
 func (h *AuthHandler) Login(c *echo.Context) error {
-	var req dto.LoginRequest
+	var req validators.LoginRequest
 	if err := c.Bind(&req); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request"})
 	}
 
-	token, err := h.service.Login(c.Request().Context(), &req)
+	if errs := req.Validate(); errs != nil {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{"error": errs})
+	}
+
+	input := &dto.LoginInput{
+		Email:    req.Email,
+		Password: req.Password,
+	}
+
+	token, err := h.service.Login(c.Request().Context(), input)
 	if err != nil {
 		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "invalid email or password"})
 	}

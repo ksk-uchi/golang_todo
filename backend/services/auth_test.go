@@ -38,7 +38,7 @@ func TestAuthService_Login(t *testing.T) {
 
 	tests := []struct {
 		name          string
-		req           *dto.LoginRequest
+		req           *dto.LoginInput
 		mockUser      *ent.User
 		mockError     error
 		expectedToken bool
@@ -46,7 +46,7 @@ func TestAuthService_Login(t *testing.T) {
 	}{
 		{
 			name: "Success",
-			req: &dto.LoginRequest{
+			req: &dto.LoginInput{
 				Email:    "test@example.com",
 				Password: password,
 			},
@@ -61,7 +61,7 @@ func TestAuthService_Login(t *testing.T) {
 		},
 		{
 			name: "UserNotFound",
-			req: &dto.LoginRequest{
+			req: &dto.LoginInput{
 				Email:    "notfound@example.com",
 				Password: password,
 			},
@@ -72,7 +72,7 @@ func TestAuthService_Login(t *testing.T) {
 		},
 		{
 			name: "InvalidPassword",
-			req: &dto.LoginRequest{
+			req: &dto.LoginInput{
 				Email:    "test@example.com",
 				Password: "wrongpassword",
 			},

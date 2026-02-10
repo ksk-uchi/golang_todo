@@ -21,7 +21,7 @@ type MockAuthService struct {
 	mock.Mock
 }
 
-func (m *MockAuthService) Login(ctx context.Context, req *dto.LoginRequest) (string, error) {
+func (m *MockAuthService) Login(ctx context.Context, req *dto.LoginInput) (string, error) {
 	args := m.Called(ctx, req)
 	return args.String(0), args.Error(1)
 }
@@ -74,10 +74,10 @@ func TestAuthHandler_Login(t *testing.T) {
 			c := e.NewContext(req, rec)
 
 			if tt.name != "InvalidRequest" {
-				var reqDTO dto.LoginRequest
-				_ = json.Unmarshal([]byte(tt.reqBody), &reqDTO)
-				mockService.On("Login", mock.Anything, mock.MatchedBy(func(r *dto.LoginRequest) bool {
-					return r.Email == reqDTO.Email && r.Password == reqDTO.Password
+				var input dto.LoginInput
+				_ = json.Unmarshal([]byte(tt.reqBody), &input)
+				mockService.On("Login", mock.Anything, mock.MatchedBy(func(r *dto.LoginInput) bool {
+					return r.Email == input.Email && r.Password == input.Password
 				})).Return(tt.mockToken, tt.mockError)
 			}
 
