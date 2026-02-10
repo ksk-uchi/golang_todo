@@ -134,7 +134,7 @@ export default function Home() {
   }
 
   return (
-    <div className="space-y-4 pb-20">
+    <div className="space-y-4">
       {todos && todos.length > 0 ? (
         todos.map((todo) => (
           <TodoItem
