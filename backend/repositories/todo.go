@@ -76,6 +76,7 @@ func (r *TodoRepository) UpdateTodo(id int, title *string, description *string) 
 	}
 
 	return r.client.Todo.UpdateOneID(id).
+		Where(todo.HasUserWith(user.ID(u.ID))).
 		SetNillableTitle(title).
 		SetNillableDescription(description).
 		Save(r.ctx)
