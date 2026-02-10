@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -15,10 +16,31 @@ import (
 	"todo-app/ent/todo"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v5"
 	_ "github.com/mattn/go-sqlite3" // テスト実行にドライバが必要
 	"github.com/stretchr/testify/assert"
 )
+
+func TestMain(m *testing.M) {
+	if err := godotenv.Load("../envs/test.env"); err != nil {
+		fmt.Println("Error loading .env file:", err)
+		os.Exit(1)
+	}
+	code := m.Run()
+	os.Exit(code)
+}
+
+type avoidCSRF struct{}
+
+func (a avoidCSRF) SetCSRFCookie(req *http.Request) {
+	cookie := &http.Cookie{Name: "csrf_token", Value: "test"}
+	req.AddCookie(cookie)
+}
+
+func (a avoidCSRF) SetCSRFHeader(req *http.Request) {
+	req.Header.Set("X-CSRF-Token", "test")
+}
 
 func createToken(t *testing.T, userID int) string {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
@@ -38,11 +60,15 @@ func createAuthenticatedRequest(t *testing.T, method, target, body string, userI
 	} else {
 		req = httptest.NewRequest(method, target, nil)
 	}
-
 	if userID != 0 {
 		cookie := &http.Cookie{Name: "token", Value: createToken(t, userID)}
 		req.AddCookie(cookie)
 	}
+
+	csrf := avoidCSRF{}
+	csrf.SetCSRFCookie(req)
+	csrf.SetCSRFHeader(req)
+
 	rec := httptest.NewRecorder()
 	return req, rec
 }
