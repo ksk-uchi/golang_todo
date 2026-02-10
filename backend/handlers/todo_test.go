@@ -30,6 +30,23 @@ func createToken(t *testing.T, userID int) string {
 	return tokenString
 }
 
+func createAuthenticatedRequest(t *testing.T, method, target, body string, userID int) (*http.Request, *httptest.ResponseRecorder) {
+	var req *http.Request
+	if body != "" {
+		req = httptest.NewRequest(method, target, strings.NewReader(body))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	} else {
+		req = httptest.NewRequest(method, target, nil)
+	}
+
+	if userID != 0 {
+		cookie := &http.Cookie{Name: "token", Value: createToken(t, userID)}
+		req.AddCookie(cookie)
+	}
+	rec := httptest.NewRecorder()
+	return req, rec
+}
+
 func TestTodoHandler_ListTodo_Integration(t *testing.T) {
 	t.Run("Todo 一覧取得", func(t *testing.T) {
 		client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
@@ -74,11 +91,7 @@ func TestTodoHandler_ListTodo_Integration(t *testing.T) {
 				SaveX(context.Background())
 		}
 
-		req := httptest.NewRequest(http.MethodGet, "/todo", nil)
-		cookie := &http.Cookie{Name: "token", Value: createToken(t, user.ID)}
-		req.AddCookie(cookie)
-		rec := httptest.NewRecorder()
-
+		req, rec := createAuthenticatedRequest(t, http.MethodGet, "/todo", "", user.ID)
 		e.ServeHTTP(rec, req)
 
 		assert.Equal(t, http.StatusOK, rec.Code)
@@ -105,12 +118,8 @@ func TestTodoHandler_CreateTodo_Integration(t *testing.T) {
 
 		user := client.User.Create().SetName("test").SetEmail("test").SetPassword("test").SaveX(context.Background())
 		body := `{"title": "New Todo", "description": "New Description"}`
-		req := httptest.NewRequest(http.MethodPost, "/todo", strings.NewReader(body))
-		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-		cookie := &http.Cookie{Name: "token", Value: createToken(t, user.ID)}
-		req.AddCookie(cookie)
-		rec := httptest.NewRecorder()
 
+		req, rec := createAuthenticatedRequest(t, http.MethodPost, "/todo", body, user.ID)
 		e.ServeHTTP(rec, req)
 
 		assert.Equal(t, http.StatusCreated, rec.Code)
@@ -138,12 +147,8 @@ func TestTodoHandler_CreateTodo_Integration(t *testing.T) {
 		user := client.User.Create().SetName("test").SetEmail("test").SetPassword("test").SaveX(context.Background())
 
 		body := `{"title": "", "description": "New Description"}`
-		req := httptest.NewRequest(http.MethodPost, "/todo", strings.NewReader(body))
-		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-		cookie := &http.Cookie{Name: "token", Value: createToken(t, user.ID)}
-		req.AddCookie(cookie)
-		rec := httptest.NewRecorder()
 
+		req, rec := createAuthenticatedRequest(t, http.MethodPost, "/todo", body, user.ID)
 		e.ServeHTTP(rec, req)
 
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
@@ -163,11 +168,8 @@ func TestTodoHandler_CreateTodo_Integration(t *testing.T) {
 		app.Router.Setup(e)
 
 		body := `{"title": "New Todo", "description": "New Description"}`
-		req := httptest.NewRequest(http.MethodPost, "/todo", strings.NewReader(body))
-		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-		// No cookie
-		rec := httptest.NewRecorder()
 
+		req, rec := createAuthenticatedRequest(t, http.MethodPost, "/todo", body, 0)
 		e.ServeHTTP(rec, req)
 
 		assert.Equal(t, http.StatusUnauthorized, rec.Code)
@@ -194,13 +196,8 @@ func TestTodoHandler_UpdateTodo_Integration(t *testing.T) {
 			SaveX(context.Background())
 
 		body := `{"title": "Updated Title", "description": "Updated Description"}`
-		req := httptest.NewRequest(http.MethodPatch, "/todo/1", strings.NewReader(body)) // Assuming ID 1
 
-		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-		cookie := &http.Cookie{Name: "token", Value: createToken(t, user.ID)}
-		req.AddCookie(cookie)
-		rec := httptest.NewRecorder()
-
+		req, rec := createAuthenticatedRequest(t, http.MethodPatch, "/todo/1", body, user.ID) // Assuming ID 1
 		e.ServeHTTP(rec, req)
 
 		assert.Equal(t, http.StatusOK, rec.Code)
@@ -229,12 +226,8 @@ func TestTodoHandler_UpdateTodo_Integration(t *testing.T) {
 		user := client.User.Create().SetName("test").SetEmail("test").SetPassword("test").SaveX(context.Background())
 
 		body := `{"title": "Updated Title"}`
-		req := httptest.NewRequest(http.MethodPatch, "/todo/999", strings.NewReader(body))
-		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-		cookie := &http.Cookie{Name: "token", Value: createToken(t, user.ID)}
-		req.AddCookie(cookie)
-		rec := httptest.NewRecorder()
 
+		req, rec := createAuthenticatedRequest(t, http.MethodPatch, "/todo/999", body, user.ID)
 		e.ServeHTTP(rec, req)
 
 		assert.Equal(t, http.StatusNotFound, rec.Code)
@@ -260,13 +253,8 @@ func TestTodoHandler_UpdateTodo_Integration(t *testing.T) {
 			SaveX(context.Background())
 
 		body := `{"title": "Updated Title"}`
-		req := httptest.NewRequest(http.MethodPatch, fmt.Sprintf("/todo/%d", todo.ID), strings.NewReader(body))
-		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-		// Login as user2
-		cookie := &http.Cookie{Name: "token", Value: createToken(t, user2.ID)}
-		req.AddCookie(cookie)
-		rec := httptest.NewRecorder()
 
+		req, rec := createAuthenticatedRequest(t, http.MethodPatch, fmt.Sprintf("/todo/%d", todo.ID), body, user2.ID)
 		e.ServeHTTP(rec, req)
 
 		// Expect Not Found because repository filters by user
@@ -292,11 +280,7 @@ func TestTodoHandler_DeleteTodo_Integration(t *testing.T) {
 			SetUser(user).
 			SaveX(context.Background())
 
-		req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/todo/%d", todo.ID), nil)
-		cookie := &http.Cookie{Name: "token", Value: createToken(t, user.ID)}
-		req.AddCookie(cookie)
-		rec := httptest.NewRecorder()
-
+		req, rec := createAuthenticatedRequest(t, http.MethodDelete, fmt.Sprintf("/todo/%d", todo.ID), "", user.ID)
 		e.ServeHTTP(rec, req)
 
 		assert.Equal(t, http.StatusNoContent, rec.Code)
@@ -318,11 +302,7 @@ func TestTodoHandler_DeleteTodo_Integration(t *testing.T) {
 		app.Router.Setup(e)
 		user := client.User.Create().SetName("test").SetEmail("test").SetPassword("test").SaveX(context.Background())
 
-		req := httptest.NewRequest(http.MethodDelete, "/todo/999", nil)
-		cookie := &http.Cookie{Name: "token", Value: createToken(t, user.ID)}
-		req.AddCookie(cookie)
-		rec := httptest.NewRecorder()
-
+		req, rec := createAuthenticatedRequest(t, http.MethodDelete, "/todo/999", "", user.ID)
 		e.ServeHTTP(rec, req)
 
 		assert.Equal(t, http.StatusNoContent, rec.Code)
@@ -347,12 +327,7 @@ func TestTodoHandler_DeleteTodo_Integration(t *testing.T) {
 			SetUser(user1).
 			SaveX(context.Background())
 
-		req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/todo/%d", targetTodo.ID), nil)
-		// Login as user2
-		cookie := &http.Cookie{Name: "token", Value: createToken(t, user2.ID)}
-		req.AddCookie(cookie)
-		rec := httptest.NewRecorder()
-
+		req, rec := createAuthenticatedRequest(t, http.MethodDelete, fmt.Sprintf("/todo/%d", targetTodo.ID), "", user2.ID)
 		e.ServeHTTP(rec, req)
 
 		assert.Equal(t, http.StatusNoContent, rec.Code)
