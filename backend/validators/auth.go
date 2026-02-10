@@ -40,7 +40,3 @@ func (r *LoginRequest) Validate() map[string]string {
 	}
 	return nil
 }
-
-type LoginResponse struct {
-	Message string `json:"message"`
-}
