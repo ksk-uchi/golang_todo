@@ -355,15 +355,6 @@ func TestTodoHandler_DeleteTodo_Integration(t *testing.T) {
 
 		e.ServeHTTP(rec, req)
 
-		// Expect Not Found (No Content because delete is idempotent/safe if not found generally, but here returns 404 from repo for not found)
-		// Wait, DeleteTodo implementation:
-		// if n == 0 { return &ent.NotFoundError{} }
-		// And handler returns No Content if IsNotFound.
-		// So it should still be No Content even if I try to delete other's todo, effectively masking the existence.
-		// OR if I want to be strict, I should return 404.
-		// Repository returns NotFoundError if ownership match fails (WHERE user_id = ...).
-		// Handler catches NotFoundError and returns NoContent (line 153 in handlers/todo.go).
-		// So checking for StatusNoContent is correct.
 		assert.Equal(t, http.StatusNoContent, rec.Code)
 
 		// Ensure it was NOT deleted

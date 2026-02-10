@@ -83,14 +83,6 @@ func TestAuthHandler_Login(t *testing.T) {
 
 			err := handler.Login(c)
 
-			// Handler functions in Echo return error mainly for centralized error handling middleware.
-			// But here we check the response recorder.
-			// The handler returns c.JSON(...) which returns nil or error.
-			// If it returns error, it might be an echo.HTTPError, but in our implementation we return c.JSON which returns checkable error.
-			// Wait, c.JSON returns error if writing to response fails.
-			// In case of error (Unauthorized, BadRequest), we are returning c.JSON(status, map).
-
-			// So err will be likely nil if writing JSON succeeds.
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expectedStatus, rec.Code)
 
