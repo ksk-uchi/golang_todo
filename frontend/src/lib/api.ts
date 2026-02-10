@@ -4,6 +4,14 @@ export const api = axios.create({
   baseURL: "http://localhost:8080",
   headers: {
     "Content-Type": "application/json",
+    "X-CSRF-Token":
+      typeof document !== "undefined"
+        ? document.cookie
+            .split(";")
+            .map((c) => c.trim())
+            .find((cookie) => cookie.startsWith("csrf_token="))
+            ?.split("=")[1]
+        : "",
   },
   withCredentials: true,
 });
