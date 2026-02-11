@@ -44,8 +44,6 @@ func (r *Router) Setup(e *echo.Echo) {
 		AllowCredentials: true,
 	}))
 
-	r.auth.SetupAuthRoute(e.Group("/auth"))
-
 	e.Use(r.authM.Authenticate)
 	skipper := func(c *echo.Context) bool {
 		return c.Request().URL.Path == "/auth/login"
@@ -58,5 +56,11 @@ func (r *Router) Setup(e *echo.Echo) {
 		CookiePath:     "/",
 		CookieSameSite: http.SameSiteStrictMode,
 	}))
+	// XSS 対策
+	e.Use(echoMiddleware.SecureWithConfig(echoMiddleware.SecureConfig{
+		ContentSecurityPolicy: "default-src 'self'; script-src 'self' 'nonce-random123'; object-src 'none'; base-uri 'self';",
+	}))
+
+	r.auth.SetupAuthRoute(e.Group("/auth"))
 	r.todo.SetupTodoRoute(e.Group("/todo"))
 }
