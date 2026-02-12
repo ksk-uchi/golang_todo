@@ -69,13 +69,13 @@ func (h *TodoHandler) ListTodo(c *echo.Context) error {
 		})
 	}
 
-	pageInt := echo.QueryParamOr[int](c, "page", 1)
-	if pageInt < 1 {
+	pageInt, err := echo.QueryParamOr[int](c, "page", 1)
+	if err != nil || pageInt < 1 {
 		pageInt = 1
 	}
 
-	limitInt := echo.QueryParamOr[int](c, "limit", 20)
-	if limitInt < 1 {
+	limitInt, err := echo.QueryParamOr[int](c, "limit", 20)
+	if err != nil || limitInt < 1 {
 		limitInt = 20
 	}
 	if limitInt > 100 {
