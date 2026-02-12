@@ -13,12 +13,18 @@ type TodoDto struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
-func EntitiesToTodoDtoSlice(todos []*ent.Todo) []TodoDto {
-	res := make([]TodoDto, len(todos))
+type ListTodoResponseDto struct {
+	Data []TodoDto `json:"data"`
+}
+
+func EntitiesToTodoDtoSlice(todos []*ent.Todo) ListTodoResponseDto {
+	todoDtos := make([]TodoDto, len(todos))
 	for i, t := range todos {
-		res[i] = EntityToTodoDto(t)
+		todoDtos[i] = EntityToTodoDto(t)
 	}
-	return res
+	return ListTodoResponseDto{
+		Data: todoDtos,
+	}
 }
 
 func EntityToTodoDto(todo *ent.Todo) TodoDto {

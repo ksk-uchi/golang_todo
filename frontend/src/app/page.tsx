@@ -1,14 +1,14 @@
 "use client";
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api";
-import { Todo } from "@/types";
 import { TodoItem } from "@/app/components/TodoItem";
 import { TodoModal } from "@/app/components/TodoModal";
 import { Button } from "@/app/components/ui/button";
+import { api } from "@/lib/api";
+import { ListTodoResponse, Todo } from "@/types";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
-import { toast } from "sonner";
 import { useState } from "react";
+import { toast } from "sonner";
 
 export default function Home() {
   const queryClient = useQueryClient();
@@ -19,8 +19,8 @@ export default function Home() {
   } = useQuery<Todo[]>({
     queryKey: ["todos"],
     queryFn: async () => {
-      const res = await api.get("/todo");
-      return res.data;
+      const res = await api.get<ListTodoResponse>("/todo");
+      return res.data.data;
     },
   });
 
