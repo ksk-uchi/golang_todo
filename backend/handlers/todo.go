@@ -3,7 +3,6 @@ package handlers
 import (
 	"log/slog"
 	"net/http"
-	"strconv"
 	"todo-app/dto"
 	"todo-app/ent"
 	"todo-app/services"
@@ -70,24 +69,17 @@ func (h *TodoHandler) ListTodo(c *echo.Context) error {
 		})
 	}
 
-	page := c.QueryParam("page")
-	limit := c.QueryParam("limit")
-
-	pageInt := 1
-	if page != "" {
-		if p, err := strconv.Atoi(page); err == nil && p > 0 {
-			pageInt = p
-		}
+	pageInt := echo.QueryParamOr[int](c, "page", 1)
+	if pageInt < 1 {
+		pageInt = 1
 	}
 
-	limitInt := 20
-	if limit != "" {
-		if l, err := strconv.Atoi(limit); err == nil && l > 0 {
-			limitInt = l
-			if limitInt > 100 {
-				limitInt = 100
-			}
-		}
+	limitInt := echo.QueryParamOr[int](c, "limit", 20)
+	if limitInt < 1 {
+		limitInt = 20
+	}
+	if limitInt > 100 {
+		limitInt = 100
 	}
 
 	ctx := c.Request().Context()
