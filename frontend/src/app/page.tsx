@@ -35,6 +35,10 @@ export default function Home() {
         const res = await api.get<ListTodoResponse>("/todo", {
           params: { page: currentPage },
         });
+        if (res.data.data.length === 0 && currentPage > 1) {
+          router.push(`/?page=${res.data.pagination.total_pages}`);
+          return;
+        }
         setTodos(res.data.data);
         setPagination(res.data.pagination);
         setError(null);
@@ -45,7 +49,7 @@ export default function Home() {
       }
     };
     fetchTodos();
-  }, [currentPage]);
+  }, [currentPage, router]);
 
   const toastHandler = (message: string, type: "success" | "error") => {
     if (type === "success") {
