@@ -1,5 +1,6 @@
 "use client";
 
+import { PaginationControl } from "@/app/components/PaginationControl";
 import { TodoItem } from "@/app/components/TodoItem";
 import { TodoModal } from "@/app/components/TodoModal";
 import { Button } from "@/app/components/ui/button";
@@ -7,20 +8,24 @@ import { api } from "@/lib/api";
 import { ListTodoResponse, Todo } from "@/types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
 export default function Home() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const pageParam = searchParams.get("page");
+  const currentPage = pageParam ? parseInt(pageParam, 10) : 1;
+
   const queryClient = useQueryClient();
-  const {
-    data: todos,
-    isLoading,
-    error,
-  } = useQuery<Todo[]>({
-    queryKey: ["todos"],
+  const { data, isLoading, error } = useQuery<ListTodoResponse>({
+    queryKey: ["todos", currentPage],
     queryFn: async () => {
-      const res = await api.get<ListTodoResponse>("/todo");
-      return res.data.data;
+      const res = await api.get<ListTodoResponse>("/todo", {
+        params: { page: currentPage },
+      });
+      return res.data;
     },
   });
 
@@ -48,7 +53,8 @@ export default function Home() {
       return res.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["todos"] });
+      // Invalidate current page to reflect changes (items might shift)
+      queryClient.invalidateQueries({ queryKey: ["todos", currentPage] });
       setIsModalOpen(false);
       toastHandler("Todo created successfully", "success");
     },
@@ -69,7 +75,7 @@ export default function Home() {
       return res.data;
     },
     onSuccess: (updatedTodo) => {
-      queryClient.invalidateQueries({ queryKey: ["todos"] });
+      queryClient.invalidateQueries({ queryKey: ["todos", currentPage] });
       // Update selected todo if currently viewing it to reflect changes (e.g. updated_at if displayed)
       setSelectedTodo(updatedTodo);
       // Modal stays open
@@ -85,7 +91,7 @@ export default function Home() {
       await api.delete(`/todo/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["todos"] });
+      queryClient.invalidateQueries({ queryKey: ["todos", currentPage] });
       toastHandler("Todo deleted successfully", "success");
     },
     onError: () => {
@@ -113,6 +119,10 @@ export default function Home() {
     }
   };
 
+  const handlePageChange = (page: number) => {
+    router.push(`/?page=${page}`);
+  };
+
   const handleDelete = (id: number) => {
     deleteMutation.mutate(id);
   };
@@ -135,8 +145,8 @@ export default function Home() {
 
   return (
     <div className="space-y-4">
-      {todos && todos.length > 0 ? (
-        todos.map((todo) => (
+      {data && data.data.length > 0 ? (
+        data.data.map((todo) => (
           <TodoItem
             key={todo.id}
             todo={todo}
@@ -169,6 +179,16 @@ export default function Home() {
         onSave={handleSave}
         isSaving={createMutation.isPending || updateMutation.isPending}
       />
+
+      {data && data.pagination.total_pages > 1 && (
+        <PaginationControl
+          totalPages={data.pagination.total_pages}
+          currentPage={data.pagination.current_page}
+          hasNext={data.pagination.has_next}
+          hasPrev={data.pagination.has_prev}
+          onPageChange={handlePageChange}
+        />
+      )}
     </div>
   );
 }
