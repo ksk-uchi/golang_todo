@@ -14,16 +14,26 @@ type TodoDto struct {
 }
 
 type ListTodoResponseDto struct {
-	Data []TodoDto `json:"data"`
+	Data       []TodoDto      `json:"data"`
+	Pagination *PaginationDto `json:"pagination"`
 }
 
-func EntitiesToTodoDtoSlice(todos []*ent.Todo) ListTodoResponseDto {
+type PaginationDto struct {
+	TotalPages  int  `json:"total_pages"`
+	CurrentPage int  `json:"current_page"`
+	HasNext     bool `json:"has_next"`
+	HasPrev     bool `json:"has_prev"`
+	Limit       int  `json:"limit"`
+}
+
+func EntitiesToTodoDtoSlice(todos []*ent.Todo, pagination *PaginationDto) ListTodoResponseDto {
 	todoDtos := make([]TodoDto, len(todos))
 	for i, t := range todos {
 		todoDtos[i] = EntityToTodoDto(t)
 	}
 	return ListTodoResponseDto{
-		Data: todoDtos,
+		Data:       todoDtos,
+		Pagination: pagination,
 	}
 }
 

@@ -3,6 +3,7 @@ package handlers
 import (
 	"log/slog"
 	"net/http"
+	"strconv"
 	"todo-app/dto"
 	"todo-app/ent"
 	"todo-app/services"
@@ -69,17 +70,43 @@ func (h *TodoHandler) ListTodo(c *echo.Context) error {
 		})
 	}
 
+	page := c.QueryParam("page")
+	limit := c.QueryParam("limit")
+
+	pageInt := 1
+	if page != "" {
+		if p, err := strconv.Atoi(page); err == nil && p > 0 {
+			pageInt = p
+		}
+	}
+
+	limitInt := 20
+	if limit != "" {
+		if l, err := strconv.Atoi(limit); err == nil && l > 0 {
+			limitInt = l
+			if limitInt > 100 {
+				limitInt = 100
+			}
+		}
+	}
+
 	ctx := c.Request().Context()
 	service, err := h.serviceFactory(ctx, h.logger, h.client)
 	if err != nil {
 		return errorHandling(c, err)
 	}
-	todos, err := service.GetTodoSlice()
+
+	todos, err := service.GetTodoSlice(pageInt, limitInt)
 	if err != nil {
 		return errorHandling(c, err)
 	}
 
-	res := dto.EntitiesToTodoDtoSlice(todos)
+	pagination, err := service.CalculatePagination(pageInt, limitInt)
+	if err != nil {
+		return errorHandling(c, err)
+	}
+
+	res := dto.EntitiesToTodoDtoSlice(todos, pagination)
 
 	return c.JSON(http.StatusOK, res)
 }
