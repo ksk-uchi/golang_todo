@@ -26,17 +26,6 @@ type PaginationDto struct {
 	Limit       int  `json:"limit"`
 }
 
-func EntitiesToTodoDtoSlice(todos []*ent.Todo, pagination *PaginationDto) ListTodoResponseDto {
-	todoDtos := make([]TodoDto, len(todos))
-	for i, t := range todos {
-		todoDtos[i] = EntityToTodoDto(t)
-	}
-	return ListTodoResponseDto{
-		Data:       todoDtos,
-		Pagination: pagination,
-	}
-}
-
 func EntityToTodoDto(todo *ent.Todo) TodoDto {
 	return TodoDto{
 		ID:          todo.ID,

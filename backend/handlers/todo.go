@@ -98,7 +98,15 @@ func (h *TodoHandler) ListTodo(c *echo.Context) error {
 		return errorHandling(c, err)
 	}
 
-	res := dto.EntitiesToTodoDtoSlice(todos, pagination)
+	todoDtos := make([]dto.TodoDto, len(todos))
+	for i, t := range todos {
+		todoDtos[i] = dto.EntityToTodoDto(t)
+	}
+
+	res := dto.ListTodoResponseDto{
+		Data:       todoDtos,
+		Pagination: pagination,
+	}
 
 	return c.JSON(http.StatusOK, res)
 }
