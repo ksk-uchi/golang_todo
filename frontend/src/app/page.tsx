@@ -6,7 +6,7 @@ import { TodoModal } from "@/app/components/TodoModal";
 import { Button } from "@/app/components/ui/button";
 import { api } from "@/lib/api";
 import { ListTodoResponse, Todo } from "@/types";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
@@ -18,7 +18,6 @@ export default function Home() {
   const pageParam = searchParams.get("page");
   const currentPage = pageParam ? parseInt(pageParam, 10) : 1;
 
-  const queryClient = useQueryClient();
   const { data, isLoading, error } = useQuery<ListTodoResponse>({
     queryKey: ["todos", currentPage],
     queryFn: async () => {
@@ -32,6 +31,18 @@ export default function Home() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTodo, setSelectedTodo] = useState<Todo | null>(null);
   const [modalKey, setModalKey] = useState(0);
+
+  const [todos, setTodos] = useState<Todo[]>([]);
+  const [prevData, setPrevData] = useState<ListTodoResponse | undefined>(
+    undefined,
+  );
+
+  if (data !== prevData) {
+    setPrevData(data);
+    if (data) {
+      setTodos(data.data);
+    }
+  }
 
   const toastHandler = (message: string, type: "success" | "error") => {
     if (type === "success") {
@@ -52,9 +63,8 @@ export default function Home() {
       const res = await api.post("/todo", data);
       return res.data;
     },
-    onSuccess: () => {
-      // Invalidate current page to reflect changes (items might shift)
-      queryClient.invalidateQueries({ queryKey: ["todos", currentPage] });
+    onSuccess: (newTodo) => {
+      setTodos((prev) => [newTodo, ...prev]);
       setIsModalOpen(false);
       toastHandler("Todo created successfully", "success");
     },
@@ -75,7 +85,9 @@ export default function Home() {
       return res.data;
     },
     onSuccess: (updatedTodo) => {
-      queryClient.invalidateQueries({ queryKey: ["todos", currentPage] });
+      setTodos((prev) =>
+        prev.map((t) => (t.id === updatedTodo.id ? updatedTodo : t)),
+      );
       // Update selected todo if currently viewing it to reflect changes (e.g. updated_at if displayed)
       setSelectedTodo(updatedTodo);
       // Modal stays open
@@ -90,8 +102,12 @@ export default function Home() {
     mutationFn: async (id: number) => {
       await api.delete(`/todo/${id}`);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["todos", currentPage] });
+    onSuccess: (_, id) => {
+      if (todos.length === 1 && currentPage > 1) {
+        router.push(`/?page=${currentPage - 1}`);
+      } else {
+        setTodos((prev) => prev.filter((t) => t.id !== id));
+      }
       toastHandler("Todo deleted successfully", "success");
     },
     onError: () => {
@@ -145,8 +161,8 @@ export default function Home() {
 
   return (
     <div className="space-y-4">
-      {data && data.data.length > 0 ? (
-        data.data.map((todo) => (
+      {todos.length > 0 ? (
+        todos.map((todo) => (
           <TodoItem
             key={todo.id}
             todo={todo}
