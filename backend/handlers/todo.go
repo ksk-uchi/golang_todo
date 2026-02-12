@@ -69,17 +69,39 @@ func (h *TodoHandler) ListTodo(c *echo.Context) error {
 		})
 	}
 
+	pageInt, err := echo.QueryParamOr[int](c, "page", 1)
+	if err != nil || pageInt < 1 {
+		pageInt = 1
+	}
+
+	limitInt, err := echo.QueryParamOr[int](c, "limit", 20)
+	if err != nil || limitInt < 1 {
+		limitInt = 20
+	}
+	if limitInt > 100 {
+		limitInt = 100
+	}
+
 	ctx := c.Request().Context()
 	service, err := h.serviceFactory(ctx, h.logger, h.client)
 	if err != nil {
 		return errorHandling(c, err)
 	}
-	todos, err := service.GetTodoSlice()
+
+	todos, err := service.GetTodoSlice(pageInt, limitInt)
 	if err != nil {
 		return errorHandling(c, err)
 	}
 
-	res := dto.EntitiesToTodoDtoSlice(todos)
+	pagination, err := service.CalculatePagination(pageInt, limitInt)
+	if err != nil {
+		return errorHandling(c, err)
+	}
+
+	res := dto.ListTodoResponseDto{
+		Data:       todos,
+		Pagination: pagination,
+	}
 
 	return c.JSON(http.StatusOK, res)
 }

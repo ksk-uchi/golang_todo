@@ -113,6 +113,7 @@ func TestTodoHandler_ListTodo_Integration(t *testing.T) {
 				SetTitle(d.Title).
 				SetDescription(d.Description).
 				SetCreatedAt(d.CreatedAt).
+				SetUpdatedAt(d.CreatedAt).
 				SetUser(user).
 				SaveX(context.Background())
 		}
@@ -122,12 +123,20 @@ func TestTodoHandler_ListTodo_Integration(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, rec.Code)
 
-		var res []dto.TodoDto
+		var res dto.ListTodoResponseDto
 		json.Unmarshal(rec.Body.Bytes(), &res)
-		assert.Len(t, res, 3)
-		assert.Equal(t, "Test Title 2", res[0].Title)
-		assert.Equal(t, "Test Title 1", res[1].Title)
-		assert.Equal(t, "Test Title 3", res[2].Title)
+		assert.Len(t, res.Data, 3)
+		assert.Equal(t, "Test Title 2", res.Data[0].Title)
+		assert.Equal(t, "Test Title 1", res.Data[1].Title)
+		assert.Equal(t, "Test Title 3", res.Data[2].Title)
+
+		// Check Pagination
+		assert.NotNil(t, res.Pagination)
+		assert.Equal(t, 1, res.Pagination.TotalPages)
+		assert.Equal(t, 1, res.Pagination.CurrentPage)
+		assert.False(t, res.Pagination.HasNext)
+		assert.False(t, res.Pagination.HasPrev)
+		assert.Equal(t, 20, res.Pagination.Limit)
 	})
 }
 

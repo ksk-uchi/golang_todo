@@ -13,12 +13,17 @@ type TodoDto struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
-func EntitiesToTodoDtoSlice(todos []*ent.Todo) []TodoDto {
-	res := make([]TodoDto, len(todos))
-	for i, t := range todos {
-		res[i] = EntityToTodoDto(t)
-	}
-	return res
+type ListTodoResponseDto struct {
+	Data       []TodoDto      `json:"data"`
+	Pagination *PaginationDto `json:"pagination"`
+}
+
+type PaginationDto struct {
+	TotalPages  int  `json:"total_pages"`
+	CurrentPage int  `json:"current_page"`
+	HasNext     bool `json:"has_next"`
+	HasPrev     bool `json:"has_prev"`
+	Limit       int  `json:"limit"`
 }
 
 func EntityToTodoDto(todo *ent.Todo) TodoDto {

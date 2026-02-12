@@ -1,32 +1,51 @@
 "use client";
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api";
-import { Todo } from "@/types";
+import { PaginationControl } from "@/app/components/PaginationControl";
 import { TodoItem } from "@/app/components/TodoItem";
 import { TodoModal } from "@/app/components/TodoModal";
 import { Button } from "@/app/components/ui/button";
+import { api } from "@/lib/api";
+import { ListTodoResponse, Todo } from "@/types";
 import { Plus } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { useState } from "react";
 
 export default function Home() {
-  const queryClient = useQueryClient();
-  const {
-    data: todos,
-    isLoading,
-    error,
-  } = useQuery<Todo[]>({
-    queryKey: ["todos"],
-    queryFn: async () => {
-      const res = await api.get("/todo");
-      return res.data;
-    },
-  });
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const pageParam = searchParams.get("page");
+  const currentPage = pageParam ? parseInt(pageParam, 10) : 1;
 
+  const [todos, setTodos] = useState<Todo[]>([]);
+  const [pagination, setPagination] = useState<
+    ListTodoResponse["pagination"] | null
+  >(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTodo, setSelectedTodo] = useState<Todo | null>(null);
   const [modalKey, setModalKey] = useState(0);
+
+  useEffect(() => {
+    const fetchTodos = async () => {
+      setIsLoading(true);
+      try {
+        const res = await api.get<ListTodoResponse>("/todo", {
+          params: { page: currentPage },
+        });
+        setTodos(res.data.data);
+        setPagination(res.data.pagination);
+        setError(null);
+      } catch (err) {
+        setError(err as Error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchTodos();
+  }, [currentPage]);
 
   const toastHandler = (message: string, type: "success" | "error") => {
     if (type === "success") {
@@ -41,57 +60,57 @@ export default function Home() {
       });
     }
   };
-  // Mutations
-  const createMutation = useMutation({
-    mutationFn: async (data: { title: string; description: string }) => {
+
+  const handleCreate = async (data: { title: string; description: string }) => {
+    setIsSaving(true);
+    try {
       const res = await api.post("/todo", data);
-      return res.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["todos"] });
+      setTodos((prev) => [res.data, ...prev]);
       setIsModalOpen(false);
       toastHandler("Todo created successfully", "success");
-    },
-    onError: () => {
+    } catch {
       toastHandler("Failed to create todo", "error");
-    },
-  });
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
-  const updateMutation = useMutation({
-    mutationFn: async ({
-      id,
-      data,
-    }: {
-      id: number;
-      data: { title: string; description: string };
-    }) => {
+  const handleUpdate = async ({
+    id,
+    data,
+  }: {
+    id: number;
+    data: { title: string; description: string };
+  }) => {
+    setIsSaving(true);
+    try {
       const res = await api.patch(`/todo/${id}`, data);
-      return res.data;
-    },
-    onSuccess: (updatedTodo) => {
-      queryClient.invalidateQueries({ queryKey: ["todos"] });
-      // Update selected todo if currently viewing it to reflect changes (e.g. updated_at if displayed)
+      const updatedTodo = res.data;
+      setTodos((prev) =>
+        prev.map((t) => (t.id === updatedTodo.id ? updatedTodo : t)),
+      );
       setSelectedTodo(updatedTodo);
-      // Modal stays open
       toastHandler("Todo updated successfully", "success");
-    },
-    onError: () => {
+    } catch {
       toastHandler("Failed to update todo", "error");
-    },
-  });
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
-  const deleteMutation = useMutation({
-    mutationFn: async (id: number) => {
+  const handleDelete = async (id: number) => {
+    try {
       await api.delete(`/todo/${id}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["todos"] });
+      if (todos.length === 1 && currentPage > 1) {
+        router.push(`/?page=${currentPage - 1}`);
+      } else {
+        setTodos((prev) => prev.filter((t) => t.id !== id));
+      }
       toastHandler("Todo deleted successfully", "success");
-    },
-    onError: () => {
+    } catch {
       toastHandler("Failed to delete todo", "error");
-    },
-  });
+    }
+  };
 
   const handleOpenCreate = () => {
     setSelectedTodo(null);
@@ -107,14 +126,14 @@ export default function Home() {
 
   const handleSave = (data: { title: string; description: string }) => {
     if (selectedTodo) {
-      updateMutation.mutate({ id: selectedTodo.id, data });
+      handleUpdate({ id: selectedTodo.id, data });
     } else {
-      createMutation.mutate(data);
+      handleCreate(data);
     }
   };
 
-  const handleDelete = (id: number) => {
-    deleteMutation.mutate(id);
+  const handlePageChange = (page: number) => {
+    router.push(`/?page=${page}`);
   };
 
   if (isLoading) {
@@ -135,7 +154,7 @@ export default function Home() {
 
   return (
     <div className="space-y-4">
-      {todos && todos.length > 0 ? (
+      {todos.length > 0 ? (
         todos.map((todo) => (
           <TodoItem
             key={todo.id}
@@ -167,8 +186,18 @@ export default function Home() {
         onClose={() => setIsModalOpen(false)}
         todo={selectedTodo}
         onSave={handleSave}
-        isSaving={createMutation.isPending || updateMutation.isPending}
+        isSaving={isSaving}
       />
+
+      {pagination && pagination.total_pages > 1 && (
+        <PaginationControl
+          totalPages={pagination.total_pages}
+          currentPage={pagination.current_page}
+          hasNext={pagination.has_next}
+          hasPrev={pagination.has_prev}
+          onPageChange={handlePageChange}
+        />
+      )}
     </div>
   );
 }
