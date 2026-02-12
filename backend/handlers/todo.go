@@ -98,13 +98,8 @@ func (h *TodoHandler) ListTodo(c *echo.Context) error {
 		return errorHandling(c, err)
 	}
 
-	todoDtos := make([]dto.TodoDto, len(todos))
-	for i, t := range todos {
-		todoDtos[i] = dto.EntityToTodoDto(t)
-	}
-
 	res := dto.ListTodoResponseDto{
-		Data:       todoDtos,
+		Data:       todos,
 		Pagination: pagination,
 	}
 

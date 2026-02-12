@@ -40,10 +40,18 @@ type TodoService struct {
 	repo   ITodoRepository
 }
 
-func (s *TodoService) GetTodoSlice(currentPage int, limit int) ([]*ent.Todo, error) {
+func (s *TodoService) GetTodoSlice(currentPage int, limit int) ([]dto.TodoDto, error) {
 	offset := (currentPage - 1) * limit
 	todos, err := s.repo.FetchTodos(limit, offset)
-	return todos, err
+	if err != nil {
+		return nil, err
+	}
+
+	todoDtos := make([]dto.TodoDto, len(todos))
+	for i, t := range todos {
+		todoDtos[i] = dto.EntityToTodoDto(t)
+	}
+	return todoDtos, nil
 }
 
 func (s *TodoService) CalculatePagination(currentPage int, limit int) (*dto.PaginationDto, error) {

@@ -67,7 +67,7 @@ func (s *spyTodoRepo) DeleteTodo(id int) error {
 }
 
 func TestTodoService_GetTodoSlice(t *testing.T) {
-	t.Run("リポジトリから取得したデータがそのまま返ること", func(t *testing.T) {
+	t.Run("リポジトリから取得したデータが正しくDTOに変換されて返ること", func(t *testing.T) {
 		repo := &spyTodoRepo{
 			fetchTodos: func(limit int, offset int) ([]*ent.Todo, error) {
 				return []*ent.Todo{
