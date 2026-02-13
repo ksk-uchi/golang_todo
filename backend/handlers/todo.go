@@ -69,12 +69,12 @@ func (h *TodoHandler) ListTodo(c *echo.Context) error {
 		})
 	}
 
-	pageInt, err := echo.QueryParamOr[int](c, "page", 1)
+	pageInt, err := echo.QueryParamOr(c, "page", 1)
 	if err != nil || pageInt < 1 {
 		pageInt = 1
 	}
 
-	limitInt, err := echo.QueryParamOr[int](c, "limit", 20)
+	limitInt, err := echo.QueryParamOr(c, "limit", 20)
 	if err != nil || limitInt < 1 {
 		limitInt = 20
 	}
@@ -82,7 +82,10 @@ func (h *TodoHandler) ListTodo(c *echo.Context) error {
 		limitInt = 100
 	}
 
-	includeDone := c.QueryParam("include_done") == "true"
+	includeDone, err := echo.QueryParamOr(c, "include_done", false)
+	if err != nil {
+		includeDone = false
+	}
 
 	ctx := c.Request().Context()
 	service, err := h.serviceFactory(ctx, h.logger, h.client)
