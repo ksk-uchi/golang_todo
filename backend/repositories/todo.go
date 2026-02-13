@@ -24,27 +24,38 @@ func (r *TodoRepository) getUser() (*ent.User, error) {
 	return u.(*ent.User), nil
 }
 
-func (r *TodoRepository) FetchTodos(limit int, offset int) ([]*ent.Todo, error) {
+func (r *TodoRepository) FetchTodos(limit int, offset int, includeDone bool) ([]*ent.Todo, error) {
 	u, err := r.getUser()
 	if err != nil {
 		return nil, err
 	}
-	return r.client.Todo.Query().
-		Where(todo.HasUserWith(user.ID(u.ID))).
+	query := r.client.Todo.Query().
+		Where(todo.HasUserWith(user.ID(u.ID)))
+
+	if !includeDone {
+		query.Where(todo.DoneAtIsNil())
+	}
+
+	return query.
 		Order(ent.Desc(todo.FieldUpdatedAt), ent.Desc(todo.FieldID)).
 		Limit(limit).
 		Offset(offset).
 		All(r.ctx)
 }
 
-func (r *TodoRepository) GetTodoCount() (int, error) {
+func (r *TodoRepository) GetTodoCount(includeDone bool) (int, error) {
 	u, err := r.getUser()
 	if err != nil {
 		return 0, err
 	}
-	return r.client.Todo.Query().
-		Where(todo.HasUserWith(user.ID(u.ID))).
-		Count(r.ctx)
+	query := r.client.Todo.Query().
+		Where(todo.HasUserWith(user.ID(u.ID)))
+
+	if !includeDone {
+		query.Where(todo.DoneAtIsNil())
+	}
+
+	return query.Count(r.ctx)
 }
 
 func (r *TodoRepository) FindTodo(id int) (*ent.Todo, error) {

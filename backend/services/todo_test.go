@@ -16,24 +16,24 @@ import (
 
 type spyTodoRepo struct {
 	repositories.TodoRepository
-	fetchTodos func(limit int, offset int) ([]*ent.Todo, error)
-	count      func() (int, error)
+	fetchTodos func(limit int, offset int, includeDone bool) ([]*ent.Todo, error)
+	count      func(includeDone bool) (int, error)
 	create     func(title string, description string) (*ent.Todo, error)
 	update     func(id int, title *string, description *string) (*ent.Todo, error)
 	find       func(id int) (*ent.Todo, error)
 	delete     func(id int) error
 }
 
-func (s *spyTodoRepo) FetchTodos(limit int, offset int) ([]*ent.Todo, error) {
+func (s *spyTodoRepo) FetchTodos(limit int, offset int, includeDone bool) ([]*ent.Todo, error) {
 	if s.fetchTodos != nil {
-		return s.fetchTodos(limit, offset)
+		return s.fetchTodos(limit, offset, includeDone)
 	}
 	return nil, nil
 }
 
-func (s *spyTodoRepo) GetTodoCount() (int, error) {
+func (s *spyTodoRepo) GetTodoCount(includeDone bool) (int, error) {
 	if s.count != nil {
-		return s.count()
+		return s.count(includeDone)
 	}
 	return 0, nil
 }
@@ -69,7 +69,7 @@ func (s *spyTodoRepo) DeleteTodo(id int) error {
 func TestTodoService_GetTodoSlice(t *testing.T) {
 	t.Run("リポジトリから取得したデータが正しくDTOに変換されて返ること", func(t *testing.T) {
 		repo := &spyTodoRepo{
-			fetchTodos: func(limit int, offset int) ([]*ent.Todo, error) {
+			fetchTodos: func(limit int, offset int, includeDone bool) ([]*ent.Todo, error) {
 				return []*ent.Todo{
 					{ID: 2, Title: "Test Task 2", CreatedAt: time.Date(2026, 2, 4, 10, 0, 2, 0, time.Local)},
 					{ID: 1, Title: "Test Task 1", CreatedAt: time.Date(2026, 2, 4, 10, 0, 1, 0, time.Local)},
@@ -80,7 +80,7 @@ func TestTodoService_GetTodoSlice(t *testing.T) {
 		ctx := context.Background()
 		service := services.NewTodoService(ctx, slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
 
-		results, err := service.GetTodoSlice(1, 10)
+		results, err := service.GetTodoSlice(1, 10, false)
 
 		assert.NoError(t, err)
 		assert.Len(t, results, 3)
@@ -89,14 +89,14 @@ func TestTodoService_GetTodoSlice(t *testing.T) {
 
 	t.Run("リポジトリがエラーを返した場合、そのままエラーを返すこと", func(t *testing.T) {
 		repo := &spyTodoRepo{
-			fetchTodos: func(limit int, offset int) ([]*ent.Todo, error) {
+			fetchTodos: func(limit int, offset int, includeDone bool) ([]*ent.Todo, error) {
 				return nil, errors.New("db connection error")
 			},
 		}
 		ctx := context.Background()
 		service := services.NewTodoService(ctx, slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
 
-		results, err := service.GetTodoSlice(1, 10)
+		results, err := service.GetTodoSlice(1, 10, false)
 
 		assert.Error(t, err)
 		assert.Nil(t, results)

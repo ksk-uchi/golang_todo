@@ -18,8 +18,8 @@ func ProvideTodoServiceFactory() TodoServiceFactory {
 }
 
 type ITodoRepository interface {
-	FetchTodos(limit int, offset int) ([]*ent.Todo, error)
-	GetTodoCount() (int, error)
+	FetchTodos(limit int, offset int, includeDone bool) ([]*ent.Todo, error)
+	GetTodoCount(includeDone bool) (int, error)
 	FindTodo(id int) (*ent.Todo, error)
 	CreateTodo(title string, description string) (*ent.Todo, error)
 	UpdateTodo(id int, title *string, description *string) (*ent.Todo, error)
@@ -40,9 +40,9 @@ type TodoService struct {
 	repo   ITodoRepository
 }
 
-func (s *TodoService) GetTodoSlice(currentPage int, limit int) ([]dto.TodoDto, error) {
+func (s *TodoService) GetTodoSlice(currentPage int, limit int, includeDone bool) ([]dto.TodoDto, error) {
 	offset := (currentPage - 1) * limit
-	todos, err := s.repo.FetchTodos(limit, offset)
+	todos, err := s.repo.FetchTodos(limit, offset, includeDone)
 	if err != nil {
 		return nil, err
 	}
@@ -54,8 +54,8 @@ func (s *TodoService) GetTodoSlice(currentPage int, limit int) ([]dto.TodoDto, e
 	return todoDtos, nil
 }
 
-func (s *TodoService) CalculatePagination(currentPage int, limit int) (*dto.PaginationDto, error) {
-	count, err := s.repo.GetTodoCount()
+func (s *TodoService) CalculatePagination(currentPage int, limit int, includeDone bool) (*dto.PaginationDto, error) {
+	count, err := s.repo.GetTodoCount(includeDone)
 	if err != nil {
 		return nil, err
 	}

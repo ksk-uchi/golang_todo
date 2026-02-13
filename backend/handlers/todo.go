@@ -82,18 +82,20 @@ func (h *TodoHandler) ListTodo(c *echo.Context) error {
 		limitInt = 100
 	}
 
+	includeDone := c.QueryParam("include_done") == "true"
+
 	ctx := c.Request().Context()
 	service, err := h.serviceFactory(ctx, h.logger, h.client)
 	if err != nil {
 		return errorHandling(c, err)
 	}
 
-	todos, err := service.GetTodoSlice(pageInt, limitInt)
+	todos, err := service.GetTodoSlice(pageInt, limitInt, includeDone)
 	if err != nil {
 		return errorHandling(c, err)
 	}
 
-	pagination, err := service.CalculatePagination(pageInt, limitInt)
+	pagination, err := service.CalculatePagination(pageInt, limitInt, includeDone)
 	if err != nil {
 		return errorHandling(c, err)
 	}
