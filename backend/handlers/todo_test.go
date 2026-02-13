@@ -140,6 +140,74 @@ func TestTodoHandler_ListTodo_Integration(t *testing.T) {
 	})
 }
 
+func TestTodoHandler_ListTodo_IncludeDone_Integration(t *testing.T) {
+	client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
+	defer client.Close()
+
+	e := echo.New()
+	app, err := di.InitializeTestApp(e, client)
+	assert.NoError(t, err)
+
+	app.Router.Setup(e)
+
+	user := client.User.Create().SetName("test").SetEmail("test").SetPassword("test").SaveX(context.Background())
+
+	// 1. Active Todo
+	client.Todo.Create().
+		SetTitle("Active Todo 1").
+		SetDescription("Desc").
+		SetUser(user).
+		SaveX(context.Background())
+
+	// 2. Done Todo
+	client.Todo.Create().
+		SetTitle("Done Todo").
+		SetDescription("Desc").
+		SetDoneAt(time.Now()).
+		SetUser(user).
+		SaveX(context.Background())
+
+	// 3. Active Todo
+	client.Todo.Create().
+		SetTitle("Active Todo 2").
+		SetDescription("Desc").
+		SetUser(user).
+		SaveX(context.Background())
+
+	t.Run("Default returns only active todos", func(t *testing.T) {
+		req, rec := createAuthenticatedRequest(t, http.MethodGet, "/todo", "", user.ID)
+		e.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+		var res dto.ListTodoResponseDto
+		json.Unmarshal(rec.Body.Bytes(), &res)
+		assert.Len(t, res.Data, 2)
+		for _, todo := range res.Data {
+			assert.Contains(t, todo.Title, "Active")
+		}
+	})
+
+	t.Run("include_done=true returns all todos", func(t *testing.T) {
+		req, rec := createAuthenticatedRequest(t, http.MethodGet, "/todo?include_done=true", "", user.ID)
+		e.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+		var res dto.ListTodoResponseDto
+		json.Unmarshal(rec.Body.Bytes(), &res)
+		assert.Len(t, res.Data, 3)
+	})
+
+	t.Run("include_done=false returns only active todos", func(t *testing.T) {
+		req, rec := createAuthenticatedRequest(t, http.MethodGet, "/todo?include_done=false", "", user.ID)
+		e.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+		var res dto.ListTodoResponseDto
+		json.Unmarshal(rec.Body.Bytes(), &res)
+		assert.Len(t, res.Data, 2)
+	})
+}
+
 func TestTodoHandler_CreateTodo_Integration(t *testing.T) {
 	t.Run("Todo 新規作成", func(t *testing.T) {
 		client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")

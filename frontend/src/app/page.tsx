@@ -4,14 +4,16 @@ import { PaginationControl } from "@/app/components/PaginationControl";
 import { TodoItem } from "@/app/components/TodoItem";
 import { TodoModal } from "@/app/components/TodoModal";
 import { Button } from "@/app/components/ui/button";
+import { Checkbox } from "@/app/components/ui/checkbox";
+import { Label } from "@/app/components/ui/label";
 import { api } from "@/lib/api";
 import { ListTodoResponse, Todo } from "@/types";
 import { Plus } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { toast } from "sonner";
 
-export default function Home() {
+function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const pageParam = searchParams.get("page");
@@ -27,13 +29,14 @@ export default function Home() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTodo, setSelectedTodo] = useState<Todo | null>(null);
   const [modalKey, setModalKey] = useState(0);
+  const [hideDone, setHideDone] = useState(true);
 
   useEffect(() => {
     const fetchTodos = async () => {
       setIsLoading(true);
       try {
         const res = await api.get<ListTodoResponse>("/todo", {
-          params: { page: currentPage },
+          params: { page: currentPage, include_done: !hideDone },
         });
         if (res.data.data.length === 0 && currentPage > 1) {
           router.push(`/?page=${res.data.pagination.total_pages}`);
@@ -49,7 +52,7 @@ export default function Home() {
       }
     };
     fetchTodos();
-  }, [currentPage, router]);
+  }, [currentPage, router, hideDone]);
 
   const toastHandler = (message: string, type: "success" | "error") => {
     if (type === "success") {
@@ -158,6 +161,24 @@ export default function Home() {
 
   return (
     <div className="space-y-4">
+      <div className="flex items-center space-x-2 pb-2">
+        <Checkbox
+          id="hide-done"
+          checked={hideDone}
+          onCheckedChange={(checked) => {
+            const isChecked = checked === true;
+            setHideDone(isChecked);
+            router.push("/?page=1");
+          }}
+        />
+        <Label
+          htmlFor="hide-done"
+          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+        >
+          完了したものを非表示にする
+        </Label>
+      </div>
+
       {todos.length > 0 ? (
         todos.map((todo) => (
           <TodoItem
@@ -203,5 +224,19 @@ export default function Home() {
         />
       )}
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex justify-center p-8">
+          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+        </div>
+      }
+    >
+      <HomeContent />
+    </Suspense>
   );
 }

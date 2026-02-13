@@ -69,17 +69,22 @@ func (h *TodoHandler) ListTodo(c *echo.Context) error {
 		})
 	}
 
-	pageInt, err := echo.QueryParamOr[int](c, "page", 1)
+	pageInt, err := echo.QueryParamOr(c, "page", 1)
 	if err != nil || pageInt < 1 {
 		pageInt = 1
 	}
 
-	limitInt, err := echo.QueryParamOr[int](c, "limit", 20)
+	limitInt, err := echo.QueryParamOr(c, "limit", 20)
 	if err != nil || limitInt < 1 {
 		limitInt = 20
 	}
 	if limitInt > 100 {
 		limitInt = 100
+	}
+
+	includeDone, err := echo.QueryParamOr(c, "include_done", false)
+	if err != nil {
+		includeDone = false
 	}
 
 	ctx := c.Request().Context()
@@ -88,12 +93,12 @@ func (h *TodoHandler) ListTodo(c *echo.Context) error {
 		return errorHandling(c, err)
 	}
 
-	todos, err := service.GetTodoSlice(pageInt, limitInt)
+	todos, err := service.GetTodoSlice(pageInt, limitInt, includeDone)
 	if err != nil {
 		return errorHandling(c, err)
 	}
 
-	pagination, err := service.CalculatePagination(pageInt, limitInt)
+	pagination, err := service.CalculatePagination(pageInt, limitInt, includeDone)
 	if err != nil {
 		return errorHandling(c, err)
 	}

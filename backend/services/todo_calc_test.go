@@ -73,14 +73,14 @@ func TestTodoService_CalculatePagination(t *testing.T) {
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
 				repo := &spyTodoRepo{
-					count: func() (int, error) {
+					count: func(includeDone bool) (int, error) {
 						return tt.count, nil
 					},
 				}
 				ctx := context.Background()
 				service := services.NewTodoService(ctx, slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
 
-				pagination, err := service.CalculatePagination(tt.currentPage, tt.limit)
+				pagination, err := service.CalculatePagination(tt.currentPage, tt.limit, false)
 
 				assert.NoError(t, err)
 				assert.Equal(t, tt.expected.totalPages, pagination.TotalPages)
@@ -94,14 +94,14 @@ func TestTodoService_CalculatePagination(t *testing.T) {
 
 	t.Run("カウント取得でエラーが発生した場合、エラーを返すこと", func(t *testing.T) {
 		repo := &spyTodoRepo{
-			count: func() (int, error) {
+			count: func(includeDone bool) (int, error) {
 				return 0, errors.New("db error")
 			},
 		}
 		ctx := context.Background()
 		service := services.NewTodoService(ctx, slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
 
-		pagination, err := service.CalculatePagination(1, 20)
+		pagination, err := service.CalculatePagination(1, 20, false)
 
 		assert.Error(t, err)
 		assert.Nil(t, pagination)
