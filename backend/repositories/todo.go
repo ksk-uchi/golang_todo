@@ -3,6 +3,7 @@ package repositories
 import (
 	"context"
 	"log/slog"
+	"time"
 	"todo-app/ent"
 	"todo-app/ent/todo"
 	"todo-app/ent/user"
@@ -108,6 +109,37 @@ func (r *TodoRepository) UpdateTodo(ctx context.Context, id int, title *string, 
 		SetNillableTitle(title).
 		SetNillableDescription(description).
 		Save(ctx)
+}
+
+func (r *TodoRepository) UpdateDoneStatus(ctx context.Context, id int, isDone bool) (*ent.Todo, error) {
+	u, err := r.getUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	client := getEntClient(ctx) // Verify ownership and lock
+	query := client.Todo.Query().
+		Where(todo.ID(id)).
+		Where(todo.HasUserWith(user.ID(u.ID))).
+		ForUpdate()
+
+	t, err := query.Only(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if isDone {
+		// すでに done_at が NULL ではない場合は何もしない
+		if t.DoneAt != nil {
+			return t, nil
+		}
+		return t.Update().SetDoneAt(time.Now()).Save(ctx)
+	} else {
+		// done_at が NULL の場合は何もしない
+		if t.DoneAt == nil {
+			return t, nil
+		}
+		return t.Update().ClearDoneAt().Save(ctx)
+	}
 }
 
 func (r *TodoRepository) DeleteTodo(ctx context.Context, id int) error {

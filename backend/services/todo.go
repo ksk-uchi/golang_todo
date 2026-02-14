@@ -23,6 +23,7 @@ type ITodoRepository interface {
 	FindTodo(ctx context.Context, id int) (*ent.Todo, error)
 	CreateTodo(ctx context.Context, title string, description string) (*ent.Todo, error)
 	UpdateTodo(ctx context.Context, id int, title *string, description *string) (*ent.Todo, error)
+	UpdateDoneStatus(ctx context.Context, id int, isDone bool) (*ent.Todo, error)
 	DeleteTodo(ctx context.Context, id int) error
 }
 
@@ -85,4 +86,27 @@ func (s *TodoService) UpdateTodo(ctx context.Context, id int, title *string, des
 
 func (s *TodoService) DeleteTodo(ctx context.Context, id int) error {
 	return s.repo.DeleteTodo(ctx, id)
+}
+
+func (s *TodoService) UpdateDoneStatus(ctx context.Context, id int, isDone bool) (*ent.Todo, error) {
+	client := ent.FromContext(ctx)
+	tx, err := client.Tx(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	txCtx := ent.NewTxContext(ctx, tx)
+	todo, err := s.repo.UpdateDoneStatus(txCtx, id, isDone)
+	if err != nil {
+		if rerr := tx.Rollback(); rerr != nil {
+			return nil, rerr
+		}
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return todo, nil
 }

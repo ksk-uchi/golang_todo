@@ -1,9 +1,12 @@
 package handlers_test
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -12,8 +15,12 @@ import (
 	"time"
 	"todo-app/di"
 	"todo-app/dto"
+	"todo-app/ent"
 	"todo-app/ent/enttest"
 	"todo-app/ent/todo"
+	"todo-app/handlers"
+	"todo-app/repositories"
+	"todo-app/services"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/joho/godotenv"
@@ -21,6 +28,66 @@ import (
 	_ "github.com/mattn/go-sqlite3" // テスト実行にドライバが必要
 	"github.com/stretchr/testify/assert"
 )
+
+type spyTodoRepo struct {
+	repositories.TodoRepository
+	fetchTodos       func(limit int, offset int, includeDone bool) ([]*ent.Todo, error)
+	count            func(includeDone bool) (int, error)
+	create           func(title string, description string) (*ent.Todo, error)
+	update           func(id int, title *string, description *string) (*ent.Todo, error)
+	updateDoneStatus func(id int, isDone bool) (*ent.Todo, error)
+	find             func(id int) (*ent.Todo, error)
+	delete           func(id int) error
+}
+
+func (s *spyTodoRepo) FetchTodos(ctx context.Context, limit int, offset int, includeDone bool) ([]*ent.Todo, error) {
+	if s.fetchTodos != nil {
+		return s.fetchTodos(limit, offset, includeDone)
+	}
+	return nil, nil
+}
+
+func (s *spyTodoRepo) GetTodoCount(ctx context.Context, includeDone bool) (int, error) {
+	if s.count != nil {
+		return s.count(includeDone)
+	}
+	return 0, nil
+}
+
+func (s *spyTodoRepo) FindTodo(ctx context.Context, id int) (*ent.Todo, error) {
+	if s.find != nil {
+		return s.find(id)
+	}
+	return nil, nil
+}
+
+func (s *spyTodoRepo) CreateTodo(ctx context.Context, title string, description string) (*ent.Todo, error) {
+	if s.create != nil {
+		return s.create(title, description)
+	}
+	return nil, nil
+}
+
+func (s *spyTodoRepo) UpdateTodo(ctx context.Context, id int, title *string, description *string) (*ent.Todo, error) {
+	if s.update != nil {
+		return s.update(id, title, description)
+	}
+	return nil, nil
+}
+
+func (s *spyTodoRepo) UpdateDoneStatus(ctx context.Context, id int, isDone bool) (*ent.Todo, error) {
+	if s.updateDoneStatus != nil {
+		return s.updateDoneStatus(id, isDone)
+	}
+	return nil, nil
+}
+
+func (s *spyTodoRepo) DeleteTodo(ctx context.Context, id int) error {
+	if s.delete != nil {
+		return s.delete(id)
+	}
+	return nil
+}
 
 func TestMain(m *testing.M) {
 	if err := godotenv.Load("../envs/test.env"); err != nil {
@@ -438,5 +505,99 @@ func TestTodoHandler_DeleteTodo_Integration(t *testing.T) {
 		// Ensure it was NOT deleted
 		exists := client.Todo.Query().Where(todo.ID(targetTodo.ID)).ExistX(context.Background())
 		assert.True(t, exists)
+	})
+}
+
+func TestTodoHandler_UpdateDoneStatus(t *testing.T) {
+	client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&cache=shared&_fk=1")
+	defer client.Close()
+
+	t.Run("成功時", func(t *testing.T) {
+		e := echo.New()
+		reqBody := map[string]interface{}{"is_done": true}
+		body, _ := json.Marshal(reqBody)
+		req := httptest.NewRequest(http.MethodPut, "/todo/1/done", bytes.NewReader(body))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetPath("/todo/:id/done")
+		c.SetPathValues(echo.PathValues{
+			{Name: "id", Value: "1"},
+		})
+
+		repo := &spyTodoRepo{
+			updateDoneStatus: func(id int, isDone bool) (*ent.Todo, error) {
+				now := time.Now()
+				return &ent.Todo{
+					ID:        id,
+					Title:     "Todo",
+					DoneAt:    &now,
+					CreatedAt: now,
+					UpdatedAt: now,
+				}, nil
+			},
+		}
+
+		factory := func(logger *slog.Logger) (*services.TodoService, error) {
+			return services.NewTodoService(logger, repo), nil
+		}
+
+		h := handlers.NewTodoHandler(slog.New(slog.NewTextHandler(io.Discard, nil)), client, factory)
+
+		err := h.UpdateDoneStatus(c)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, rec.Code)
+		assert.Contains(t, rec.Body.String(), "\"done_at\"")
+	})
+
+	t.Run("バリデーションエラー", func(t *testing.T) {
+		e := echo.New()
+		reqBody := map[string]interface{}{} // is_done missing
+		body, _ := json.Marshal(reqBody)
+		req := httptest.NewRequest(http.MethodPut, "/todo/1/done", bytes.NewReader(body))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetPath("/todo/:id/done")
+		c.SetPathValues(echo.PathValues{
+			{Name: "id", Value: "1"},
+		})
+
+		h := handlers.NewTodoHandler(slog.New(slog.NewTextHandler(io.Discard, nil)), client, nil)
+
+		err := h.UpdateDoneStatus(c)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+		assert.Contains(t, rec.Body.String(), "error")
+	})
+
+	t.Run("Todoが見つからない場合", func(t *testing.T) {
+		e := echo.New()
+		reqBody := map[string]interface{}{"is_done": true}
+		body, _ := json.Marshal(reqBody)
+		req := httptest.NewRequest(http.MethodPut, "/todo/999/done", bytes.NewReader(body))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetPath("/todo/:id/done")
+		c.SetPathValues(echo.PathValues{
+			{Name: "id", Value: "999"},
+		})
+
+		repo := &spyTodoRepo{
+			updateDoneStatus: func(id int, isDone bool) (*ent.Todo, error) {
+				return nil, &ent.NotFoundError{}
+			},
+		}
+
+		factory := func(logger *slog.Logger) (*services.TodoService, error) {
+			return services.NewTodoService(logger, repo), nil
+		}
+
+		h := handlers.NewTodoHandler(slog.New(slog.NewTextHandler(io.Discard, nil)), client, factory)
+
+		err := h.UpdateDoneStatus(c)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusNotFound, rec.Code)
 	})
 }

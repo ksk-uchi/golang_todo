@@ -20,5 +20,6 @@ func (r *TodoRouter) SetupTodoRoute(eg *echo.Group) {
 	eg.GET("", r.TodoHandler.ListTodo)
 	eg.POST("", r.TodoHandler.CreateTodo)
 	eg.PATCH("/:id", r.TodoHandler.UpdateTodo)
+	eg.PUT("/:id/done", r.TodoHandler.UpdateDoneStatus)
 	eg.DELETE("/:id", r.TodoHandler.DeleteTodo)
 }
