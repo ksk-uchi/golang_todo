@@ -24,42 +24,42 @@ type spyTodoRepo struct {
 	delete     func(id int) error
 }
 
-func (s *spyTodoRepo) FetchTodos(limit int, offset int, includeDone bool) ([]*ent.Todo, error) {
+func (s *spyTodoRepo) FetchTodos(ctx context.Context, limit int, offset int, includeDone bool) ([]*ent.Todo, error) {
 	if s.fetchTodos != nil {
 		return s.fetchTodos(limit, offset, includeDone)
 	}
 	return nil, nil
 }
 
-func (s *spyTodoRepo) GetTodoCount(includeDone bool) (int, error) {
+func (s *spyTodoRepo) GetTodoCount(ctx context.Context, includeDone bool) (int, error) {
 	if s.count != nil {
 		return s.count(includeDone)
 	}
 	return 0, nil
 }
 
-func (s *spyTodoRepo) FindTodo(id int) (*ent.Todo, error) {
+func (s *spyTodoRepo) FindTodo(ctx context.Context, id int) (*ent.Todo, error) {
 	if s.find != nil {
 		return s.find(id)
 	}
 	return nil, nil
 }
 
-func (s *spyTodoRepo) CreateTodo(title string, description string) (*ent.Todo, error) {
+func (s *spyTodoRepo) CreateTodo(ctx context.Context, title string, description string) (*ent.Todo, error) {
 	if s.create != nil {
 		return s.create(title, description)
 	}
 	return nil, nil
 }
 
-func (s *spyTodoRepo) UpdateTodo(id int, title *string, description *string) (*ent.Todo, error) {
+func (s *spyTodoRepo) UpdateTodo(ctx context.Context, id int, title *string, description *string) (*ent.Todo, error) {
 	if s.update != nil {
 		return s.update(id, title, description)
 	}
 	return nil, nil
 }
 
-func (s *spyTodoRepo) DeleteTodo(id int) error {
+func (s *spyTodoRepo) DeleteTodo(ctx context.Context, id int) error {
 	if s.delete != nil {
 		return s.delete(id)
 	}
@@ -78,9 +78,9 @@ func TestTodoService_GetTodoSlice(t *testing.T) {
 			},
 		}
 		ctx := context.Background()
-		service := services.NewTodoService(ctx, slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
+		service := services.NewTodoService(slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
 
-		results, err := service.GetTodoSlice(1, 10, false)
+		results, err := service.GetTodoSlice(ctx, 1, 10, false)
 
 		assert.NoError(t, err)
 		assert.Len(t, results, 3)
@@ -94,9 +94,9 @@ func TestTodoService_GetTodoSlice(t *testing.T) {
 			},
 		}
 		ctx := context.Background()
-		service := services.NewTodoService(ctx, slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
+		service := services.NewTodoService(slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
 
-		results, err := service.GetTodoSlice(1, 10, false)
+		results, err := service.GetTodoSlice(ctx, 1, 10, false)
 
 		assert.Error(t, err)
 		assert.Nil(t, results)
@@ -118,9 +118,9 @@ func TestTodoService_CreateTodo(t *testing.T) {
 			},
 		}
 		ctx := context.Background()
-		service := services.NewTodoService(ctx, slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
+		service := services.NewTodoService(slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
 
-		result, err := service.CreateTodo("New Task", "New Description")
+		result, err := service.CreateTodo(ctx, "New Task", "New Description")
 
 		assert.NoError(t, err)
 		assert.NotNil(t, result)
@@ -135,9 +135,9 @@ func TestTodoService_CreateTodo(t *testing.T) {
 			},
 		}
 		ctx := context.Background()
-		service := services.NewTodoService(ctx, slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
+		service := services.NewTodoService(slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
 
-		result, err := service.CreateTodo("New Task", "New Description")
+		result, err := service.CreateTodo(ctx, "New Task", "New Description")
 
 		assert.Error(t, err)
 		assert.Nil(t, result)
@@ -161,9 +161,9 @@ func TestTodoService_UpdateTodo(t *testing.T) {
 			},
 		}
 		ctx := context.Background()
-		service := services.NewTodoService(ctx, slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
+		service := services.NewTodoService(slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
 
-		result, err := service.UpdateTodo(1, &title, &desc)
+		result, err := service.UpdateTodo(ctx, 1, &title, &desc)
 
 		assert.NoError(t, err)
 		assert.NotNil(t, result)
@@ -179,9 +179,9 @@ func TestTodoService_UpdateTodo(t *testing.T) {
 			},
 		}
 		ctx := context.Background()
-		service := services.NewTodoService(ctx, slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
+		service := services.NewTodoService(slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
 
-		result, err := service.UpdateTodo(1, &title, nil)
+		result, err := service.UpdateTodo(ctx, 1, &title, nil)
 
 		assert.Error(t, err)
 		assert.Nil(t, result)
@@ -204,9 +204,9 @@ func TestTodoService_UpdateTodo(t *testing.T) {
 			},
 		}
 		ctx := context.Background()
-		service := services.NewTodoService(ctx, slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
+		service := services.NewTodoService(slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
 
-		result, err := service.UpdateTodo(1, nil, nil)
+		result, err := service.UpdateTodo(ctx, 1, nil, nil)
 
 		assert.NoError(t, err)
 		assert.NotNil(t, result)
@@ -223,9 +223,9 @@ func TestTodoService_DeleteTodo(t *testing.T) {
 			},
 		}
 		ctx := context.Background()
-		service := services.NewTodoService(ctx, slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
+		service := services.NewTodoService(slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
 
-		err := service.DeleteTodo(1)
+		err := service.DeleteTodo(ctx, 1)
 
 		assert.NoError(t, err)
 	})
@@ -237,9 +237,9 @@ func TestTodoService_DeleteTodo(t *testing.T) {
 			},
 		}
 		ctx := context.Background()
-		service := services.NewTodoService(ctx, slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
+		service := services.NewTodoService(slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
 
-		err := service.DeleteTodo(1)
+		err := service.DeleteTodo(ctx, 1)
 
 		assert.Error(t, err)
 		assert.Equal(t, "db error", err.Error())

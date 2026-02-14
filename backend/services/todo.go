@@ -8,41 +8,39 @@ import (
 	"todo-app/repositories"
 )
 
-type TodoServiceFactory func(context.Context, *slog.Logger, *ent.Client) (*TodoService, error)
+type TodoServiceFactory func(*slog.Logger) (*TodoService, error)
 
 func ProvideTodoServiceFactory() TodoServiceFactory {
-	return func(ctx context.Context, logger *slog.Logger, client *ent.Client) (*TodoService, error) {
-		repo := repositories.NewTodoRepository(ctx, client)
-		return NewTodoService(ctx, logger, repo), nil
+	return func(logger *slog.Logger) (*TodoService, error) {
+		repo := repositories.NewTodoRepository(logger)
+		return NewTodoService(logger, repo), nil
 	}
 }
 
 type ITodoRepository interface {
-	FetchTodos(limit int, offset int, includeDone bool) ([]*ent.Todo, error)
-	GetTodoCount(includeDone bool) (int, error)
-	FindTodo(id int) (*ent.Todo, error)
-	CreateTodo(title string, description string) (*ent.Todo, error)
-	UpdateTodo(id int, title *string, description *string) (*ent.Todo, error)
-	DeleteTodo(id int) error
+	FetchTodos(ctx context.Context, limit int, offset int, includeDone bool) ([]*ent.Todo, error)
+	GetTodoCount(ctx context.Context, includeDone bool) (int, error)
+	FindTodo(ctx context.Context, id int) (*ent.Todo, error)
+	CreateTodo(ctx context.Context, title string, description string) (*ent.Todo, error)
+	UpdateTodo(ctx context.Context, id int, title *string, description *string) (*ent.Todo, error)
+	DeleteTodo(ctx context.Context, id int) error
 }
 
-func NewTodoService(ctx context.Context, logger *slog.Logger, repo ITodoRepository) *TodoService {
+func NewTodoService(logger *slog.Logger, repo ITodoRepository) *TodoService {
 	return &TodoService{
-		ctx:    ctx,
 		logger: logger,
 		repo:   repo,
 	}
 }
 
 type TodoService struct {
-	ctx    context.Context
 	logger *slog.Logger
 	repo   ITodoRepository
 }
 
-func (s *TodoService) GetTodoSlice(currentPage int, limit int, includeDone bool) ([]dto.TodoDto, error) {
+func (s *TodoService) GetTodoSlice(ctx context.Context, currentPage int, limit int, includeDone bool) ([]dto.TodoDto, error) {
 	offset := (currentPage - 1) * limit
-	todos, err := s.repo.FetchTodos(limit, offset, includeDone)
+	todos, err := s.repo.FetchTodos(ctx, limit, offset, includeDone)
 	if err != nil {
 		return nil, err
 	}
@@ -54,8 +52,8 @@ func (s *TodoService) GetTodoSlice(currentPage int, limit int, includeDone bool)
 	return todoDtos, nil
 }
 
-func (s *TodoService) CalculatePagination(currentPage int, limit int, includeDone bool) (*dto.PaginationDto, error) {
-	count, err := s.repo.GetTodoCount(includeDone)
+func (s *TodoService) CalculatePagination(ctx context.Context, currentPage int, limit int, includeDone bool) (*dto.PaginationDto, error) {
+	count, err := s.repo.GetTodoCount(ctx, includeDone)
 	if err != nil {
 		return nil, err
 	}
@@ -74,17 +72,17 @@ func (s *TodoService) CalculatePagination(currentPage int, limit int, includeDon
 	}, nil
 }
 
-func (s *TodoService) CreateTodo(title string, description string) (*ent.Todo, error) {
-	return s.repo.CreateTodo(title, description)
+func (s *TodoService) CreateTodo(ctx context.Context, title string, description string) (*ent.Todo, error) {
+	return s.repo.CreateTodo(ctx, title, description)
 }
 
-func (s *TodoService) UpdateTodo(id int, title *string, description *string) (*ent.Todo, error) {
+func (s *TodoService) UpdateTodo(ctx context.Context, id int, title *string, description *string) (*ent.Todo, error) {
 	if title == nil && description == nil {
-		return s.repo.FindTodo(id)
+		return s.repo.FindTodo(ctx, id)
 	}
-	return s.repo.UpdateTodo(id, title, description)
+	return s.repo.UpdateTodo(ctx, id, title, description)
 }
 
-func (s *TodoService) DeleteTodo(id int) error {
-	return s.repo.DeleteTodo(id)
+func (s *TodoService) DeleteTodo(ctx context.Context, id int) error {
+	return s.repo.DeleteTodo(ctx, id)
 }
