@@ -430,6 +430,32 @@ func TestTodoHandler_UpdateTodo_Integration(t *testing.T) {
 		// Expect Not Found because repository filters by user
 		assert.Equal(t, http.StatusNotFound, rec.Code)
 	})
+	t.Run("Todo 更新 完了済み", func(t *testing.T) {
+		client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
+		defer client.Close()
+
+		e := echo.New()
+		app, err := di.InitializeTestApp(e, client)
+		assert.NoError(t, err)
+
+		app.Router.Setup(e)
+
+		user := client.User.Create().SetName("test").SetEmail("test").SetPassword("test").SaveX(context.Background())
+		todo := client.Todo.Create().
+			SetTitle("Done Todo").
+			SetDescription("Description").
+			SetDoneAt(time.Now()).
+			SetUser(user).
+			SaveX(context.Background())
+
+		body := `{"title": "Updated Title", "description": "Updated Description"}`
+
+		req, rec := createAuthenticatedRequest(t, http.MethodPatch, fmt.Sprintf("/todo/%d", todo.ID), body, user.ID)
+		e.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+		assert.Contains(t, rec.Body.String(), "cannot update a completed todo")
+	})
 }
 
 func TestTodoHandler_DeleteTodo_Integration(t *testing.T) {

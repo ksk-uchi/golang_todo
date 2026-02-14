@@ -3,6 +3,7 @@ package repositories
 import (
 	"context"
 	"log/slog"
+	"strings"
 	"time"
 	"todo-app/ent"
 	"todo-app/ent/todo"
@@ -24,6 +25,8 @@ func (r *TodoRepository) getUser(ctx context.Context) (*ent.User, error) {
 	}
 	return u.(*ent.User), nil
 }
+
+// ... Check existing content ...
 
 func (r *TodoRepository) FetchTodos(ctx context.Context, limit int, offset int, includeDone bool) ([]*ent.Todo, error) {
 	u, err := r.getUser(ctx)
@@ -116,30 +119,72 @@ func (r *TodoRepository) UpdateDoneStatus(ctx context.Context, id int, isDone bo
 	if err != nil {
 		return nil, err
 	}
-	client := getEntClient(ctx) // Verify ownership and lock
+	client := getEntClient(ctx)
+
+	// Helper function to execute update
+	executeUpdate := func(t *ent.Todo) (*ent.Todo, error) {
+		if isDone {
+			if t.DoneAt != nil {
+				return t, nil
+			}
+			return t.Update().SetDoneAt(time.Now()).Save(ctx)
+		} else {
+			if t.DoneAt == nil {
+				return t, nil
+			}
+			return t.Update().ClearDoneAt().Save(ctx)
+		}
+	}
+
+	// Try with ForUpdate
+	t, err := client.Todo.Query().
+		Where(todo.ID(id)).
+		Where(todo.HasUserWith(user.ID(u.ID))).
+		ForUpdate().
+		Only(ctx)
+
+	if err != nil {
+		// Fallback for SQLite which doesn't support ForUpdate
+		if strings.Contains(err.Error(), "not supported") {
+			t, err = client.Todo.Query().
+				Where(todo.ID(id)).
+				Where(todo.HasUserWith(user.ID(u.ID))).
+				Only(ctx)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, err
+		}
+	}
+
+	return executeUpdate(t)
+}
+
+func (r *TodoRepository) GetTodoForUpdate(ctx context.Context, id int) (*ent.Todo, error) {
+	u, err := r.getUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	client := getEntClient(ctx)
+
 	query := client.Todo.Query().
 		Where(todo.ID(id)).
 		Where(todo.HasUserWith(user.ID(u.ID))).
 		ForUpdate()
 
-	t, err := query.Only(ctx)
+	res, err := query.Only(ctx)
 	if err != nil {
+		// Fallback for SQLite
+		if strings.Contains(err.Error(), "not supported") {
+			return client.Todo.Query().
+				Where(todo.ID(id)).
+				Where(todo.HasUserWith(user.ID(u.ID))).
+				Only(ctx)
+		}
 		return nil, err
 	}
-
-	if isDone {
-		// すでに done_at が NULL ではない場合は何もしない
-		if t.DoneAt != nil {
-			return t, nil
-		}
-		return t.Update().SetDoneAt(time.Now()).Save(ctx)
-	} else {
-		// done_at が NULL の場合は何もしない
-		if t.DoneAt == nil {
-			return t, nil
-		}
-		return t.Update().ClearDoneAt().Save(ctx)
-	}
+	return res, nil
 }
 
 func (r *TodoRepository) DeleteTodo(ctx context.Context, id int) error {

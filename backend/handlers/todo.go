@@ -1,10 +1,12 @@
 package handlers
 
 import (
+	"errors"
 	"log/slog"
 	"net/http"
 	"todo-app/dto"
 	"todo-app/ent"
+	apperrors "todo-app/errors"
 	"todo-app/services"
 	"todo-app/validators"
 
@@ -147,6 +149,9 @@ func (h *TodoHandler) UpdateTodo(c *echo.Context) error {
 	if err != nil {
 		if ent.IsNotFound(err) {
 			return c.JSON(http.StatusNotFound, map[string]string{"error": "todo not found"})
+		}
+		if errors.Is(err, apperrors.ErrTodoAlreadyDone) {
+			return errorHandling(c, err, http.StatusBadRequest)
 		}
 		return errorHandling(c, err, http.StatusInternalServerError)
 	}

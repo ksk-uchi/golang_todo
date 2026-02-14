@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"todo-app/dto"
 	"todo-app/ent"
+	apperrors "todo-app/errors"
 	"todo-app/repositories"
 )
 
@@ -21,6 +22,7 @@ type ITodoRepository interface {
 	FetchTodos(ctx context.Context, limit int, offset int, includeDone bool) ([]*ent.Todo, error)
 	GetTodoCount(ctx context.Context, includeDone bool) (int, error)
 	FindTodo(ctx context.Context, id int) (*ent.Todo, error)
+	GetTodoForUpdate(ctx context.Context, id int) (*ent.Todo, error)
 	CreateTodo(ctx context.Context, title string, description string) (*ent.Todo, error)
 	UpdateTodo(ctx context.Context, id int, title *string, description *string) (*ent.Todo, error)
 	UpdateDoneStatus(ctx context.Context, id int, isDone bool) (*ent.Todo, error)
@@ -78,10 +80,43 @@ func (s *TodoService) CreateTodo(ctx context.Context, title string, description 
 }
 
 func (s *TodoService) UpdateTodo(ctx context.Context, id int, title *string, description *string) (*ent.Todo, error) {
-	if title == nil && description == nil {
-		return s.repo.FindTodo(ctx, id)
+	client := ent.FromContext(ctx)
+	tx, err := client.Tx(ctx)
+	if err != nil {
+		return nil, err
 	}
-	return s.repo.UpdateTodo(ctx, id, title, description)
+	txCtx := ent.NewTxContext(ctx, tx)
+
+	todo, err := s.repo.GetTodoForUpdate(txCtx, id)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	if todo.DoneAt != nil {
+		tx.Rollback()
+		// インポートが必要
+		return nil, apperrors.ErrTodoAlreadyDone
+	}
+
+	if title == nil && description == nil {
+		if err := tx.Commit(); err != nil {
+			return nil, err
+		}
+		return todo, nil
+	}
+
+	updatedTodo, err := s.repo.UpdateTodo(txCtx, id, title, description)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return updatedTodo, nil
 }
 
 func (s *TodoService) DeleteTodo(ctx context.Context, id int) error {
