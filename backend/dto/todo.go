@@ -6,11 +6,12 @@ import (
 )
 
 type TodoDto struct {
-	ID          int       `json:"id"`
-	Title       string    `json:"title"`
-	Description string    `json:"description"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID          int        `json:"id"`
+	Title       string     `json:"title"`
+	Description string     `json:"description"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
+	DoneAt      *time.Time `json:"done_at"`
 }
 
 type ListTodoResponseDto struct {
@@ -33,5 +34,6 @@ func EntityToTodoDto(todo *ent.Todo) TodoDto {
 		Description: todo.Description,
 		CreatedAt:   todo.CreatedAt,
 		UpdatedAt:   todo.UpdatedAt,
+		DoneAt:      todo.DoneAt,
 	}
 }

@@ -16,10 +16,9 @@ trigger: always_on
   - Container: Podman
 - **frontend/**
   - Language: TypeScript
-  - Library: React, React Router
-  - UI Framework: Material UI (MUI)
+  - Library: Next.js
+  - UI Framework: shadcn ui, Tailwind CSS
   - HTTP Client: Axios
-  - Build Tool: Vite
 
 ## 2. ツール選定と提案
 
@@ -32,7 +31,7 @@ trigger: always_on
 ### frontend
 
 - **ディレクトリ固有ルールの遵守:** `package.json` および `tsconfig.json` を参照し、定義されているツール・設定を最優先すること。
-- **一貫性の維持:** 既存のスタック（例： MUI 利用）がある場合、それと重複する機能を持つ別ライブラリを導入しないこと。
+- **一貫性の維持:** 既存のスタック（例： shadcn 利用）がある場合、それと重複する機能を持つ別ライブラリを導入しないこと。
 - **改善提案:** パフォーマンスや型安全性の観点で、現在のスタックよりも適したライブラリがある場合は、実装前に提案すること。
 
 ## 3. パッケージマネージャー
