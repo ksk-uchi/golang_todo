@@ -157,6 +157,15 @@ func TestTodoService_UpdateTodo(t *testing.T) {
 					UpdatedAt:   time.Now(),
 				}, nil
 			},
+			find: func(id int) (*ent.Todo, error) {
+				return &ent.Todo{
+					ID:          id,
+					Title:       "Existing Title",
+					Description: "Existing Description",
+					CreatedAt:   time.Now(),
+					UpdatedAt:   time.Now(),
+				}, nil
+			},
 			update: func(id int, t *string, d *string) (*ent.Todo, error) {
 				return nil, errors.New("update should not be called")
 			},
@@ -180,6 +189,12 @@ func TestTodoService_UpdateDoneStatus(t *testing.T) {
 
 	t.Run("リポジトリに更新が正常に反映されること", func(t *testing.T) {
 		repo := &spyTodoRepo{
+			getTodoForUpdate: func(id int) (*ent.Todo, error) {
+				return &ent.Todo{
+					ID:     id,
+					DoneAt: nil,
+				}, nil
+			},
 			updateDoneStatus: func(id int, isDone bool) (*ent.Todo, error) {
 				now := time.Now()
 				return &ent.Todo{
@@ -208,6 +223,12 @@ func TestTodoService_UpdateDoneStatus(t *testing.T) {
 
 	t.Run("リポジトリがエラーを返した場合、ロールバックされエラーを返すこと", func(t *testing.T) {
 		repo := &spyTodoRepo{
+			getTodoForUpdate: func(id int) (*ent.Todo, error) {
+				return &ent.Todo{
+					ID:     id,
+					DoneAt: nil,
+				}, nil
+			},
 			updateDoneStatus: func(id int, isDone bool) (*ent.Todo, error) {
 				return nil, errors.New("db error")
 			},
