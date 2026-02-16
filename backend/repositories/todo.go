@@ -95,17 +95,6 @@ func (r *TodoRepository) UpdateTodo(ctx context.Context, id int, title *string, 
 		return nil, err
 	}
 	client := getEntClient(ctx)
-	// Verify ownership before update
-	exists, err := client.Todo.Query().
-		Where(todo.ID(id)).
-		Where(todo.HasUserWith(user.ID(u.ID))).
-		Exist(ctx)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, &ent.NotFoundError{}
-	}
 
 	return client.Todo.UpdateOneID(id).
 		Where(todo.HasUserWith(user.ID(u.ID))).

@@ -7,6 +7,7 @@ import (
 	"todo-app/dto"
 	"todo-app/ent"
 	"todo-app/repositories"
+	"todo-app/utils"
 )
 
 type TodoServiceFactory func(*slog.Logger) (*TodoService, error)
@@ -80,12 +81,15 @@ func (s *TodoService) CreateTodo(ctx context.Context, title string, description 
 }
 
 func (s *TodoService) UpdateTodo(ctx context.Context, id int, title *string, description *string) (*ent.Todo, error) {
+	if title == nil && description == nil {
+		return s.repo.FindTodo(ctx, id)
+	}
+
 	client := ent.FromContext(ctx)
-	tx, err := client.Tx(ctx)
+	txCtx, tx, err := utils.WithTx(ctx, client)
 	if err != nil {
 		return nil, err
 	}
-	txCtx := ent.NewContext(ctx, tx.Client())
 
 	todo, err := s.repo.GetTodoForUpdate(txCtx, id)
 	if err != nil {
@@ -97,13 +101,6 @@ func (s *TodoService) UpdateTodo(ctx context.Context, id int, title *string, des
 		tx.Rollback()
 		// インポートが必要
 		return nil, app_errors.ErrTodoAlreadyDone
-	}
-
-	if title == nil && description == nil {
-		if err := tx.Commit(); err != nil {
-			return nil, err
-		}
-		return todo, nil
 	}
 
 	updatedTodo, err := s.repo.UpdateTodo(txCtx, id, title, description)
