@@ -122,13 +122,32 @@ func (s *TodoService) DeleteTodo(ctx context.Context, id int) error {
 
 func (s *TodoService) UpdateDoneStatus(ctx context.Context, id int, isDone bool) (*ent.Todo, error) {
 	client := ent.FromContext(ctx)
-	tx, err := client.Tx(ctx)
+	txCtx, tx, err := utils.WithTx(ctx, client)
 	if err != nil {
 		return nil, err
 	}
 
-	txCtx := ent.NewContext(ctx, tx.Client())
-	todo, err := s.repo.UpdateDoneStatus(txCtx, id, isDone)
+	todo, err := s.repo.GetTodoForUpdate(txCtx, id)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	// Check if update is needed
+	if isDone && todo.DoneAt != nil {
+		if err := tx.Commit(); err != nil {
+			return nil, err
+		}
+		return todo, nil
+	}
+	if !isDone && todo.DoneAt == nil {
+		if err := tx.Commit(); err != nil {
+			return nil, err
+		}
+		return todo, nil
+	}
+
+	updatedTodo, err := s.repo.UpdateDoneStatus(txCtx, id, isDone)
 	if err != nil {
 		if rerr := tx.Rollback(); rerr != nil {
 			return nil, rerr
@@ -140,5 +159,5 @@ func (s *TodoService) UpdateDoneStatus(ctx context.Context, id int, isDone bool)
 		return nil, err
 	}
 
-	return todo, nil
+	return updatedTodo, nil
 }

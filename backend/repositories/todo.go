@@ -3,7 +3,6 @@ package repositories
 import (
 	"context"
 	"log/slog"
-	"strings"
 	"time"
 	"todo-app/ent"
 	"todo-app/ent/todo"
@@ -110,44 +109,16 @@ func (r *TodoRepository) UpdateDoneStatus(ctx context.Context, id int, isDone bo
 	}
 	client := getEntClient(ctx)
 
-	// Helper function to execute update
-	executeUpdate := func(t *ent.Todo) (*ent.Todo, error) {
-		if isDone {
-			if t.DoneAt != nil {
-				return t, nil
-			}
-			return t.Update().SetDoneAt(time.Now()).Save(ctx)
-		} else {
-			if t.DoneAt == nil {
-				return t, nil
-			}
-			return t.Update().ClearDoneAt().Save(ctx)
-		}
+	update := client.Todo.UpdateOneID(id).
+		Where(todo.HasUserWith(user.ID(u.ID)))
+
+	if isDone {
+		update.SetDoneAt(time.Now())
+	} else {
+		update.ClearDoneAt()
 	}
 
-	// Try with ForUpdate
-	t, err := client.Todo.Query().
-		Where(todo.ID(id)).
-		Where(todo.HasUserWith(user.ID(u.ID))).
-		ForUpdate().
-		Only(ctx)
-
-	if err != nil {
-		// Fallback for SQLite which doesn't support ForUpdate
-		if strings.Contains(err.Error(), "not supported") {
-			t, err = client.Todo.Query().
-				Where(todo.ID(id)).
-				Where(todo.HasUserWith(user.ID(u.ID))).
-				Only(ctx)
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			return nil, err
-		}
-	}
-
-	return executeUpdate(t)
+	return update.Save(ctx)
 }
 
 func (r *TodoRepository) GetTodoForUpdate(ctx context.Context, id int) (*ent.Todo, error) {
@@ -164,13 +135,6 @@ func (r *TodoRepository) GetTodoForUpdate(ctx context.Context, id int) (*ent.Tod
 
 	res, err := query.Only(ctx)
 	if err != nil {
-		// Fallback for SQLite
-		if strings.Contains(err.Error(), "not supported") {
-			return client.Todo.Query().
-				Where(todo.ID(id)).
-				Where(todo.HasUserWith(user.ID(u.ID))).
-				Only(ctx)
-		}
 		return nil, err
 	}
 	return res, nil
