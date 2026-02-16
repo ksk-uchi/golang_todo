@@ -3,9 +3,9 @@ package services
 import (
 	"context"
 	"log/slog"
+	"todo-app/app_errors"
 	"todo-app/dto"
 	"todo-app/ent"
-	apperrors "todo-app/errors"
 	"todo-app/repositories"
 )
 
@@ -96,7 +96,7 @@ func (s *TodoService) UpdateTodo(ctx context.Context, id int, title *string, des
 	if todo.DoneAt != nil {
 		tx.Rollback()
 		// インポートが必要
-		return nil, apperrors.ErrTodoAlreadyDone
+		return nil, app_errors.ErrTodoAlreadyDone
 	}
 
 	if title == nil && description == nil {
