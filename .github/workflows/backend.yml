@@ -1,0 +1,31 @@
+name: Backend CI
+
+on:
+  pull_request:
+    branches: ["main"]
+    paths: ["backend/**"]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    env:
+      APP_ENV: ci
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install mise
+        uses: jdx/mise-action@v2
+        with:
+          version: 2024.10.0
+          install: true
+          working_directory: backend
+
+      - name: Go Format
+        run: go fmt ./...
+
+      - name: GolangCI Lint
+        run: golangci-lint run
