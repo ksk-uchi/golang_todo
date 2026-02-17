@@ -6,6 +6,7 @@ go = "1.25.6"
 
 [env]
 APP_ENV = "local"
+TEST_ENV = "test"
 
 [tasks.create-schema]
 usage = '''
