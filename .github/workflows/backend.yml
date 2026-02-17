@@ -32,7 +32,15 @@ jobs:
       - name: Start MySQL Container
         run: docker compose up -d --wait
 
+      - name: echo env1
+        run: echo $APP_ENV
+
+      - name: echo env2
+        env:
+          APP_ENV: ci
+        run: echo $APP_ENV
+
       - name: Run Tests
         env:
           APP_ENV: ci
-        run: go test ./...
+        run: go test -v ./...
