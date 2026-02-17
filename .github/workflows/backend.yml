@@ -1,38 +1,67 @@
-name: Backend CI
+name: Backend
 
 on:
-  pull_request:
-    branches: ["main"]
-    paths: ["backend/**"]
+  push:
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend.yml"
 
 jobs:
-  lint:
+  format:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     defaults:
       run:
-        working-directory: backend
-
+        working-directory: ./backend
     steps:
       - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-backend
 
-      - name: Install mise
-        uses: jdx/mise-action@v2
-        with:
-          version: 2025.12.13
-          install: true
-          working_directory: backend
-          experimental: true
+      - name: Check format
+        run: |
+          go version
+          test -z $(gofmt -l .)
 
-      - name: Go Format
-        run: go fmt ./...
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: ./backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-backend
 
-      - name: GolangCI Lint
+      - name: Run golangci-lint
         run: golangci-lint run
 
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: ./backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-backend
+
       - name: Start MySQL Container
-        run: docker compose up -d --wait
+        run: docker compose -f docker-compose.yml up -d db
+
+      - name: Wait for MySQL
+        run: |
+          count=0
+          until docker compose exec db mysqladmin ping -h localhost --silent; do
+            echo "Waiting for MySQL..."
+            sleep 2
+            count=$((count+1))
+            if [ $count -ge 30 ]; then
+              echo "Timeout waiting for MySQL"
+              exit 1
+            fi
+          done
 
       - name: Run Tests
         env:
           APP_ENV: ci
-        run: mise unset APP_ENV && go test -v ./...
+        run: go test ./...
