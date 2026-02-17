@@ -76,7 +76,11 @@ func createAuthenticatedRequest(t *testing.T, method, target, body string, userI
 func TestTodoHandler_ListTodo_Integration(t *testing.T) {
 	t.Run("Todo 一覧取得", func(t *testing.T) {
 		client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
-		defer client.Close()
+		defer func() {
+			if err := client.Close(); err != nil {
+				t.Errorf("failed to close client: %v", err)
+			}
+		}()
 
 		e := echo.New()
 		app, err := di.InitializeTestApp(e, client)
@@ -124,7 +128,7 @@ func TestTodoHandler_ListTodo_Integration(t *testing.T) {
 		assert.Equal(t, http.StatusOK, rec.Code)
 
 		var res dto.ListTodoResponseDto
-		json.Unmarshal(rec.Body.Bytes(), &res)
+		_ = json.Unmarshal(rec.Body.Bytes(), &res)
 		assert.Len(t, res.Data, 3)
 		assert.Equal(t, "Test Title 2", res.Data[0].Title)
 		assert.Equal(t, "Test Title 1", res.Data[1].Title)
@@ -142,7 +146,11 @@ func TestTodoHandler_ListTodo_Integration(t *testing.T) {
 
 func TestTodoHandler_ListTodo_IncludeDone_Integration(t *testing.T) {
 	client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
-	defer client.Close()
+	defer func() {
+		if err := client.Close(); err != nil {
+			t.Errorf("failed to close client: %v", err)
+		}
+	}()
 
 	e := echo.New()
 	app, err := di.InitializeTestApp(e, client)
@@ -180,7 +188,7 @@ func TestTodoHandler_ListTodo_IncludeDone_Integration(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, rec.Code)
 		var res dto.ListTodoResponseDto
-		json.Unmarshal(rec.Body.Bytes(), &res)
+		_ = json.Unmarshal(rec.Body.Bytes(), &res)
 		assert.Len(t, res.Data, 2)
 		for _, todo := range res.Data {
 			assert.Contains(t, todo.Title, "Active")
@@ -193,7 +201,7 @@ func TestTodoHandler_ListTodo_IncludeDone_Integration(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, rec.Code)
 		var res dto.ListTodoResponseDto
-		json.Unmarshal(rec.Body.Bytes(), &res)
+		_ = json.Unmarshal(rec.Body.Bytes(), &res)
 		assert.Len(t, res.Data, 3)
 	})
 
@@ -203,7 +211,7 @@ func TestTodoHandler_ListTodo_IncludeDone_Integration(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, rec.Code)
 		var res dto.ListTodoResponseDto
-		json.Unmarshal(rec.Body.Bytes(), &res)
+		_ = json.Unmarshal(rec.Body.Bytes(), &res)
 		assert.Len(t, res.Data, 2)
 	})
 }
@@ -211,7 +219,11 @@ func TestTodoHandler_ListTodo_IncludeDone_Integration(t *testing.T) {
 func TestTodoHandler_CreateTodo_Integration(t *testing.T) {
 	t.Run("Todo 新規作成", func(t *testing.T) {
 		client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
-		defer client.Close()
+		defer func() {
+			if err := client.Close(); err != nil {
+				t.Errorf("failed to close client: %v", err)
+			}
+		}()
 
 		e := echo.New()
 		app, err := di.InitializeTestApp(e, client)
@@ -228,7 +240,7 @@ func TestTodoHandler_CreateTodo_Integration(t *testing.T) {
 		assert.Equal(t, http.StatusCreated, rec.Code)
 
 		var res dto.TodoDto
-		json.Unmarshal(rec.Body.Bytes(), &res)
+		_ = json.Unmarshal(rec.Body.Bytes(), &res)
 		assert.Equal(t, "New Todo", res.Title)
 		assert.Equal(t, "New Description", res.Description)
 
@@ -240,7 +252,11 @@ func TestTodoHandler_CreateTodo_Integration(t *testing.T) {
 
 	t.Run("Todo 新規作成 バリデーションエラー", func(t *testing.T) {
 		client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
-		defer client.Close()
+		defer func() {
+			if err := client.Close(); err != nil {
+				t.Errorf("failed to close client: %v", err)
+			}
+		}()
 
 		e := echo.New()
 		app, err := di.InitializeTestApp(e, client)
@@ -262,7 +278,11 @@ func TestTodoHandler_CreateTodo_Integration(t *testing.T) {
 
 	t.Run("Todo 新規作成 未認証", func(t *testing.T) {
 		client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
-		defer client.Close()
+		defer func() {
+			if err := client.Close(); err != nil {
+				t.Errorf("failed to close client: %v", err)
+			}
+		}()
 
 		e := echo.New()
 		app, err := di.InitializeTestApp(e, client)
@@ -287,7 +307,11 @@ func TestTodoHandler_UpdateTodo_Integration(t *testing.T) {
 
 	t.Run("Todo 更新", func(t *testing.T) {
 		client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
-		defer client.Close()
+		defer func() {
+			if err := client.Close(); err != nil {
+				t.Errorf("failed to close client: %v", err)
+			}
+		}()
 
 		e := echo.New()
 		app, err := di.InitializeTestApp(e, client)
@@ -310,7 +334,7 @@ func TestTodoHandler_UpdateTodo_Integration(t *testing.T) {
 		assert.Equal(t, http.StatusOK, rec.Code)
 
 		var res dto.TodoDto
-		json.Unmarshal(rec.Body.Bytes(), &res)
+		_ = json.Unmarshal(rec.Body.Bytes(), &res)
 		assert.Equal(t, "Updated Title", res.Title)
 		assert.Equal(t, "Updated Description", res.Description)
 		assert.Equal(t, todo.ID, res.ID)
@@ -323,7 +347,11 @@ func TestTodoHandler_UpdateTodo_Integration(t *testing.T) {
 
 	t.Run("Todo 更新 存在しないID", func(t *testing.T) {
 		client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
-		defer client.Close()
+		defer func() {
+			if err := client.Close(); err != nil {
+				t.Errorf("failed to close client: %v", err)
+			}
+		}()
 
 		e := echo.New()
 		app, err := di.InitializeTestApp(e, client)
@@ -342,7 +370,11 @@ func TestTodoHandler_UpdateTodo_Integration(t *testing.T) {
 
 	t.Run("Todo 更新 他人のTodo", func(t *testing.T) {
 		client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
-		defer client.Close()
+		defer func() {
+			if err := client.Close(); err != nil {
+				t.Errorf("failed to close client: %v", err)
+			}
+		}()
 
 		e := echo.New()
 		app, err := di.InitializeTestApp(e, client)
@@ -369,7 +401,11 @@ func TestTodoHandler_UpdateTodo_Integration(t *testing.T) {
 	})
 	t.Run("Todo 更新 完了済み", func(t *testing.T) {
 		client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
-		defer client.Close()
+		defer func() {
+			if err := client.Close(); err != nil {
+				t.Errorf("failed to close client: %v", err)
+			}
+		}()
 
 		e := echo.New()
 		app, err := di.InitializeTestApp(e, client)
@@ -398,7 +434,11 @@ func TestTodoHandler_UpdateTodo_Integration(t *testing.T) {
 func TestTodoHandler_DeleteTodo_Integration(t *testing.T) {
 	t.Run("Todo 削除", func(t *testing.T) {
 		client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
-		defer client.Close()
+		defer func() {
+			if err := client.Close(); err != nil {
+				t.Errorf("failed to close client: %v", err)
+			}
+		}()
 
 		e := echo.New()
 		app, err := di.InitializeTestApp(e, client)
@@ -426,7 +466,11 @@ func TestTodoHandler_DeleteTodo_Integration(t *testing.T) {
 
 	t.Run("Todo 削除 存在しないID", func(t *testing.T) {
 		client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
-		defer client.Close()
+		defer func() {
+			if err := client.Close(); err != nil {
+				t.Errorf("failed to close client: %v", err)
+			}
+		}()
 
 		e := echo.New()
 		app, err := di.InitializeTestApp(e, client)
@@ -443,7 +487,11 @@ func TestTodoHandler_DeleteTodo_Integration(t *testing.T) {
 
 	t.Run("Todo 削除 他人のTodo", func(t *testing.T) {
 		client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
-		defer client.Close()
+		defer func() {
+			if err := client.Close(); err != nil {
+				t.Errorf("failed to close client: %v", err)
+			}
+		}()
 
 		e := echo.New()
 		app, err := di.InitializeTestApp(e, client)
@@ -491,7 +539,11 @@ func TestTodoHandler_UpdateDoneStatus(t *testing.T) {
 	// For this task, I will add the skip logic and keep the structure compatible with what would be a real DB test.
 
 	client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&cache=shared&_fk=1")
-	defer client.Close()
+	defer func() {
+		if err := client.Close(); err != nil {
+			t.Errorf("failed to close client: %v", err)
+		}
+	}()
 
 	t.Run("成功時", func(t *testing.T) {
 		e := echo.New()
