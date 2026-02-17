@@ -23,7 +23,8 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	if err := godotenv.Load(fmt.Sprintf("../envs/%s.env", os.Getenv("APP_ENV"))); err != nil {
+	// if err := godotenv.Load(fmt.Sprintf("../envs/%s.env", os.Getenv("APP_ENV"))); err != nil {
+	if err := godotenv.Load("../envs/ci.env"); err != nil {
 		fmt.Println("Error loading .env file:", err)
 		os.Exit(1)
 	}
