@@ -15,6 +15,7 @@ import (
 	"todo-app/ent/enttest"
 	"todo-app/ent/todo"
 
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v5"
@@ -23,8 +24,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	// if err := godotenv.Load(fmt.Sprintf("../envs/%s.env", os.Getenv("APP_ENV"))); err != nil {
-	if err := godotenv.Load("../envs/ci.env"); err != nil {
+	if err := godotenv.Load(fmt.Sprintf("../envs/%s.env", os.Getenv("APP_ENV"))); err != nil {
 		fmt.Println("Error loading .env file:", err)
 		os.Exit(1)
 	}
@@ -76,7 +76,7 @@ func createAuthenticatedRequest(t *testing.T, method, target, body string, userI
 
 func TestTodoHandler_ListTodo_Integration(t *testing.T) {
 	t.Run("Todo 一覧取得", func(t *testing.T) {
-		client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
+		client := enttest.Open(t, os.Getenv("TEST_DATABASE"), os.Getenv("TEST_DATABASE_URL"))
 		defer func() {
 			if err := client.Close(); err != nil {
 				t.Errorf("failed to close client: %v", err)
@@ -146,7 +146,7 @@ func TestTodoHandler_ListTodo_Integration(t *testing.T) {
 }
 
 func TestTodoHandler_ListTodo_IncludeDone_Integration(t *testing.T) {
-	client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
+	client := enttest.Open(t, os.Getenv("TEST_DATABASE"), os.Getenv("TEST_DATABASE_URL"))
 	defer func() {
 		if err := client.Close(); err != nil {
 			t.Errorf("failed to close client: %v", err)
@@ -219,7 +219,7 @@ func TestTodoHandler_ListTodo_IncludeDone_Integration(t *testing.T) {
 
 func TestTodoHandler_CreateTodo_Integration(t *testing.T) {
 	t.Run("Todo 新規作成", func(t *testing.T) {
-		client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
+		client := enttest.Open(t, os.Getenv("TEST_DATABASE"), os.Getenv("TEST_DATABASE_URL"))
 		defer func() {
 			if err := client.Close(); err != nil {
 				t.Errorf("failed to close client: %v", err)
@@ -252,7 +252,7 @@ func TestTodoHandler_CreateTodo_Integration(t *testing.T) {
 	})
 
 	t.Run("Todo 新規作成 バリデーションエラー", func(t *testing.T) {
-		client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
+		client := enttest.Open(t, os.Getenv("TEST_DATABASE"), os.Getenv("TEST_DATABASE_URL"))
 		defer func() {
 			if err := client.Close(); err != nil {
 				t.Errorf("failed to close client: %v", err)
@@ -278,7 +278,7 @@ func TestTodoHandler_CreateTodo_Integration(t *testing.T) {
 	})
 
 	t.Run("Todo 新規作成 未認証", func(t *testing.T) {
-		client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
+		client := enttest.Open(t, os.Getenv("TEST_DATABASE"), os.Getenv("TEST_DATABASE_URL"))
 		defer func() {
 			if err := client.Close(); err != nil {
 				t.Errorf("failed to close client: %v", err)
@@ -307,7 +307,7 @@ func TestTodoHandler_UpdateTodo_Integration(t *testing.T) {
 	}
 
 	t.Run("Todo 更新", func(t *testing.T) {
-		client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
+		client := enttest.Open(t, os.Getenv("TEST_DATABASE"), os.Getenv("TEST_DATABASE_URL"))
 		defer func() {
 			if err := client.Close(); err != nil {
 				t.Errorf("failed to close client: %v", err)
@@ -347,7 +347,7 @@ func TestTodoHandler_UpdateTodo_Integration(t *testing.T) {
 	})
 
 	t.Run("Todo 更新 存在しないID", func(t *testing.T) {
-		client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
+		client := enttest.Open(t, os.Getenv("TEST_DATABASE"), os.Getenv("TEST_DATABASE_URL"))
 		defer func() {
 			if err := client.Close(); err != nil {
 				t.Errorf("failed to close client: %v", err)
@@ -370,7 +370,7 @@ func TestTodoHandler_UpdateTodo_Integration(t *testing.T) {
 	})
 
 	t.Run("Todo 更新 他人のTodo", func(t *testing.T) {
-		client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
+		client := enttest.Open(t, os.Getenv("TEST_DATABASE"), os.Getenv("TEST_DATABASE_URL"))
 		defer func() {
 			if err := client.Close(); err != nil {
 				t.Errorf("failed to close client: %v", err)
@@ -401,7 +401,7 @@ func TestTodoHandler_UpdateTodo_Integration(t *testing.T) {
 		assert.Equal(t, http.StatusNotFound, rec.Code)
 	})
 	t.Run("Todo 更新 完了済み", func(t *testing.T) {
-		client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
+		client := enttest.Open(t, os.Getenv("TEST_DATABASE"), os.Getenv("TEST_DATABASE_URL"))
 		defer func() {
 			if err := client.Close(); err != nil {
 				t.Errorf("failed to close client: %v", err)
@@ -434,7 +434,7 @@ func TestTodoHandler_UpdateTodo_Integration(t *testing.T) {
 
 func TestTodoHandler_DeleteTodo_Integration(t *testing.T) {
 	t.Run("Todo 削除", func(t *testing.T) {
-		client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
+		client := enttest.Open(t, os.Getenv("TEST_DATABASE"), os.Getenv("TEST_DATABASE_URL"))
 		defer func() {
 			if err := client.Close(); err != nil {
 				t.Errorf("failed to close client: %v", err)
@@ -466,7 +466,7 @@ func TestTodoHandler_DeleteTodo_Integration(t *testing.T) {
 	})
 
 	t.Run("Todo 削除 存在しないID", func(t *testing.T) {
-		client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
+		client := enttest.Open(t, os.Getenv("TEST_DATABASE"), os.Getenv("TEST_DATABASE_URL"))
 		defer func() {
 			if err := client.Close(); err != nil {
 				t.Errorf("failed to close client: %v", err)
@@ -487,7 +487,7 @@ func TestTodoHandler_DeleteTodo_Integration(t *testing.T) {
 	})
 
 	t.Run("Todo 削除 他人のTodo", func(t *testing.T) {
-		client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
+		client := enttest.Open(t, os.Getenv("TEST_DATABASE"), os.Getenv("TEST_DATABASE_URL"))
 		defer func() {
 			if err := client.Close(); err != nil {
 				t.Errorf("failed to close client: %v", err)
@@ -539,7 +539,7 @@ func TestTodoHandler_UpdateDoneStatus(t *testing.T) {
 
 	// For this task, I will add the skip logic and keep the structure compatible with what would be a real DB test.
 
-	client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&cache=shared&_fk=1")
+	client := enttest.Open(t, os.Getenv("TEST_DATABASE"), os.Getenv("TEST_DATABASE_URL"))
 	defer func() {
 		if err := client.Close(); err != nil {
 			t.Errorf("failed to close client: %v", err)
