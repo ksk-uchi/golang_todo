@@ -7,7 +7,6 @@ golangci-lint = "v2.9.0"
 
 [env]
 APP_ENV = "local"
-TEST_ENV = "test"
 
 [tasks.create-schema]
 usage = '''
