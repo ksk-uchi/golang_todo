@@ -25,9 +25,6 @@ jobs:
           working_directory: backend
           experimental: true
 
-      - name: echo env
-        run: echo $APP_ENV
-
       - name: Go Format
         run: go fmt ./...
 
