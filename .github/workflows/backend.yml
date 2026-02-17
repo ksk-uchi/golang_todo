@@ -33,3 +33,6 @@ jobs:
 
       - name: Start MySQL Container
         run: docker compose up -d --wait
+
+      - name: Run Tests
+        run: go test ./...
