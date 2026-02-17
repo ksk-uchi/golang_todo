@@ -20,7 +20,7 @@ jobs:
       - name: Install mise
         uses: jdx/mise-action@v2
         with:
-          version: 2024.10.0
+          version: 2025.12.13
           install: true
           working_directory: backend
           experimental: true
