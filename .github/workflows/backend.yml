@@ -30,3 +30,6 @@ jobs:
 
       - name: GolangCI Lint
         run: golangci-lint run
+
+      - name: Start MySQL Container
+        run: docker compose up -d --wait
