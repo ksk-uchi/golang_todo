@@ -2,6 +2,7 @@ package handlers_test
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
@@ -12,13 +13,18 @@ import (
 	"time"
 	"todo-app/ent"
 
+	entsql "entgo.io/ent/dialect/sql"
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v5"
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var testClient *ent.Client
+var (
+	testClient *ent.Client
+	testDB     *sql.DB
+)
 
 func TestMain(m *testing.M) {
 	// Load env
@@ -28,19 +34,25 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	// Open DB connection
+	// Open DB connection with sql.Open to keep reference to *sql.DB
 	var err error
-	driver := os.Getenv("TEST_DATABASE")
+	driverName := os.Getenv("TEST_DATABASE")
 	dsn := os.Getenv("TEST_DATABASE_URL")
-	testClient, err = ent.Open(driver, dsn)
+
+	testDB, err = sql.Open(driverName, dsn)
 	if err != nil {
-		log.Fatalf("failed opening connection to sqlite: %v", err)
+		log.Fatalf("failed opening connection to %s: %v", driverName, err)
 	}
+
 	defer func() {
-		if err := testClient.Close(); err != nil {
-			log.Fatalf("failed closing connection to sqlite: %v", err)
+		if err := testDB.Close(); err != nil {
+			log.Fatalf("failed closing connection to %s: %v", driverName, err)
 		}
 	}()
+
+	// Create ent.Client from sql.DB
+	drv := entsql.OpenDB(driverName, testDB)
+	testClient = ent.NewClient(ent.Driver(drv))
 
 	// Run migration
 	if err := testClient.Schema.Create(context.Background()); err != nil {
@@ -51,21 +63,95 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-// withTx starts a transaction and rolls it back at the end.
-// It provides the transactional client to the callback function.
-func withTx(t *testing.T, fn func(*ent.Client)) {
-	tx, err := testClient.Tx(context.Background())
-	if err != nil {
-		t.Fatalf("failed to start transaction: %v", err)
-	}
-	defer func() {
-		if v := recover(); v != nil {
-			_ = tx.Rollback()
-			panic(v)
+// cleanupDatabase cleans up the database by truncating (or deleting) all tables.
+// This is necessary because we cannot use transaction rollback for isolation
+// when the application code itself manages transactions.
+func cleanupDatabase(t *testing.T) {
+	ctx := context.Background()
+	driver := os.Getenv("TEST_DATABASE")
+
+	switch driver {
+	case "mysql":
+		// Disable FK checks
+		if _, err := testDB.ExecContext(ctx, "SET FOREIGN_KEY_CHECKS = 0"); err != nil {
+			t.Fatalf("failed to disable foreign keys: %v", err)
 		}
-		_ = tx.Rollback()
-	}()
-	fn(tx.Client())
+
+		// Get all table names
+		rows, err := testDB.QueryContext(ctx, "SHOW TABLES")
+		if err != nil {
+			t.Fatalf("failed to show tables: %v", err)
+		}
+		defer func() {
+			if err := rows.Close(); err != nil {
+				t.Errorf("failed closing rows: %v", err)
+			}
+		}()
+
+		var tables []string
+		for rows.Next() {
+			var table string
+			if err := rows.Scan(&table); err != nil {
+				t.Fatalf("failed to scan table name: %v", err)
+			}
+			tables = append(tables, table)
+		}
+
+		// Truncate all tables
+		for _, table := range tables {
+			if _, err := testDB.ExecContext(ctx, fmt.Sprintf("TRUNCATE TABLE `%s`", table)); err != nil {
+				t.Fatalf("failed to truncate table %s: %v", table, err)
+			}
+		}
+
+		// Enable FK checks
+		if _, err := testDB.ExecContext(ctx, "SET FOREIGN_KEY_CHECKS = 1"); err != nil {
+			t.Fatalf("failed to enable foreign keys: %v", err)
+		}
+
+	case "sqlite3":
+		// Disable FK checks
+		if _, err := testDB.ExecContext(ctx, "PRAGMA foreign_keys = OFF"); err != nil {
+			t.Fatalf("failed to disable foreign keys: %v", err)
+		}
+
+		// Get all table names
+		rows, err := testDB.QueryContext(ctx, "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
+		if err != nil {
+			t.Fatalf("failed to list tables: %v", err)
+		}
+		defer func() {
+			if err := rows.Close(); err != nil {
+				t.Errorf("failed closing rows: %v", err)
+			}
+		}()
+
+		var tables []string
+		for rows.Next() {
+			var table string
+			if err := rows.Scan(&table); err != nil {
+				t.Fatalf("failed to scan table name: %v", err)
+			}
+			tables = append(tables, table)
+		}
+
+		// Delete from all tables
+		for _, table := range tables {
+			if _, err := testDB.ExecContext(ctx, fmt.Sprintf("DELETE FROM `%s`", table)); err != nil {
+				t.Fatalf("failed to delete table %s: %v", table, err)
+			}
+		}
+		// Reset autoincrement logic: ignore error as persistent table might not exist
+		_, _ = testDB.ExecContext(ctx, "DELETE FROM sqlite_sequence")
+
+		// Enable FK checks
+		if _, err := testDB.ExecContext(ctx, "PRAGMA foreign_keys = ON"); err != nil {
+			t.Fatalf("failed to enable foreign keys: %v", err)
+		}
+
+	default:
+		t.Fatalf("unsupported driver: %s", driver)
+	}
 }
 
 type avoidCSRF struct{}
