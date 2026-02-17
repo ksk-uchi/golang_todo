@@ -3,7 +3,6 @@ description: "Checkout code and setup mise"
 runs:
   using: "composite"
   steps:
-    - uses: actions/checkout@v4
     - uses: jdx/mise-action@v2
       with:
         working_directory: backend

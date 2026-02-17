@@ -46,22 +46,11 @@ jobs:
       - uses: ./.github/actions/setup-backend
 
       - name: Start MySQL Container
-        run: docker compose -f docker-compose.yml up -d db
-
-      - name: Wait for MySQL
-        run: |
-          count=0
-          until docker compose exec db mysqladmin ping -h localhost --silent; do
-            echo "Waiting for MySQL..."
-            sleep 2
-            count=$((count+1))
-            if [ $count -ge 30 ]; then
-              echo "Timeout waiting for MySQL"
-              exit 1
-            fi
-          done
+        run: docker compose -f docker-compose.yml up -d --wait db
 
       - name: Run Tests
         env:
           APP_ENV: ci
-        run: go test ./...
+        run: |
+          mise unset APP_ENV
+          go test ./...
