@@ -81,8 +81,15 @@ func (s *TodoService) CreateTodo(ctx context.Context, title string, description 
 }
 
 func (s *TodoService) UpdateTodo(ctx context.Context, id int, title *string, description *string) (*ent.Todo, error) {
+	todo, err := s.repo.FindTodo(ctx, id)
+	if err != nil {
+		return nil, err
+	}
 	if title == nil && description == nil {
-		return s.repo.FindTodo(ctx, id)
+		return todo, nil
+	}
+	if todo.DoneAt != nil {
+		return nil, app_errors.ErrTodoAlreadyDone
 	}
 
 	client := ent.FromContext(ctx)
@@ -91,16 +98,10 @@ func (s *TodoService) UpdateTodo(ctx context.Context, id int, title *string, des
 		return nil, err
 	}
 
-	todo, err := s.repo.GetTodoForUpdate(txCtx, id)
+	_, err = s.repo.GetTodoForUpdate(txCtx, id)
 	if err != nil {
 		tx.Rollback()
 		return nil, err
-	}
-
-	if todo.DoneAt != nil {
-		tx.Rollback()
-		// インポートが必要
-		return nil, app_errors.ErrTodoAlreadyDone
 	}
 
 	updatedTodo, err := s.repo.UpdateTodo(txCtx, id, title, description)
@@ -135,15 +136,11 @@ func (s *TodoService) UpdateDoneStatus(ctx context.Context, id int, isDone bool)
 
 	// Check if update is needed
 	if isDone && todo.DoneAt != nil {
-		if err := tx.Commit(); err != nil {
-			return nil, err
-		}
+		tx.Rollback()
 		return todo, nil
 	}
 	if !isDone && todo.DoneAt == nil {
-		if err := tx.Commit(); err != nil {
-			return nil, err
-		}
+		tx.Rollback()
 		return todo, nil
 	}
 

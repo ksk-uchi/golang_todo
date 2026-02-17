@@ -95,6 +95,9 @@ func TestTodoService_UpdateTodo(t *testing.T) {
 		title := "Updated Title"
 		desc := "Updated Description"
 		repo := &spyTodoRepo{
+			find: func(id int) (*ent.Todo, error) {
+				return &ent.Todo{ID: id, Title: "Old", Description: "Old", DoneAt: nil}, nil
+			},
 			getTodoForUpdate: func(id int) (*ent.Todo, error) {
 				return &ent.Todo{ID: id, Title: "Old", Description: "Old", DoneAt: nil}, nil
 			},
@@ -126,6 +129,9 @@ func TestTodoService_UpdateTodo(t *testing.T) {
 	t.Run("リポジトリがエラーを返した場合、そのままエラーを返すこと", func(t *testing.T) {
 		title := "Updated Title"
 		repo := &spyTodoRepo{
+			find: func(id int) (*ent.Todo, error) {
+				return &ent.Todo{ID: id, DoneAt: nil}, nil
+			},
 			getTodoForUpdate: func(id int) (*ent.Todo, error) {
 				return &ent.Todo{ID: id, DoneAt: nil}, nil
 			},
