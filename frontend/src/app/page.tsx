@@ -68,11 +68,40 @@ function HomeContent() {
     }
   };
 
-  const handleCreate = async (data: { title: string; description: string }) => {
+  const handleToggleDone = async (id: number, isDone: boolean) => {
+    try {
+      const res = await api.put(`/todo/${id}/done`, { is_done: isDone });
+      const updatedTodo = res.data;
+      setTodos((prev) =>
+        prev.map((t) => (t.id === updatedTodo.id ? updatedTodo : t)),
+      );
+      toastHandler("Todo status updated", "success");
+    } catch {
+      toastHandler("Failed to update status", "error");
+    }
+  };
+
+  const handleCreate = async (data: {
+    title: string;
+    description: string;
+    isDone?: boolean;
+  }) => {
     setIsSaving(true);
     try {
-      const res = await api.post("/todo", data);
-      setTodos((prev) => [res.data, ...prev]);
+      const res = await api.post("/todo", {
+        title: data.title,
+        description: data.description,
+      });
+      let createdTodo = res.data;
+
+      if (data.isDone) {
+        const resDone = await api.put(`/todo/${createdTodo.id}/done`, {
+          is_done: true,
+        });
+        createdTodo = resDone.data;
+      }
+
+      setTodos((prev) => [createdTodo, ...prev]);
       setIsModalOpen(false);
       toastHandler("Todo created successfully", "success");
     } catch {
@@ -87,12 +116,39 @@ function HomeContent() {
     data,
   }: {
     id: number;
-    data: { title: string; description: string };
+    data: { title: string; description: string; isDone?: boolean };
   }) => {
     setIsSaving(true);
     try {
-      const res = await api.patch(`/todo/${id}`, data);
-      const updatedTodo = res.data;
+      let currentTodo = todos.find((t) => t.id === id);
+      if (!currentTodo && selectedTodo?.id === id) currentTodo = selectedTodo!;
+      if (!currentTodo) throw new Error("Todo not found");
+
+      const isCurrentlyDone = !!currentTodo.done_at;
+      const newIsDone =
+        data.isDone !== undefined ? data.isDone : isCurrentlyDone;
+
+      // 1. If becoming active (Done -> Active), toggle first
+      if (isCurrentlyDone && !newIsDone) {
+        await api.put(`/todo/${id}/done`, { is_done: false });
+      }
+
+      // 2. Update content
+      // Note: If todo is Done and we are NOT changing it to Active, the backend would block PATCH.
+      // However, the UI disables inputs when Done, ensuring title/desc shouldn't change generally.
+      // But if we perform step 1, it is now Active, so PATCH works.
+      const resPatch = await api.patch(`/todo/${id}`, {
+        title: data.title,
+        description: data.description,
+      });
+      let updatedTodo = resPatch.data;
+
+      // 3. If becoming done (Active -> Done), toggle last
+      if (!isCurrentlyDone && newIsDone) {
+        const resDone = await api.put(`/todo/${id}/done`, { is_done: true });
+        updatedTodo = resDone.data;
+      }
+
       setTodos((prev) =>
         prev.map((t) => (t.id === updatedTodo.id ? updatedTodo : t)),
       );
@@ -131,7 +187,11 @@ function HomeContent() {
     setIsModalOpen(true);
   };
 
-  const handleSave = (data: { title: string; description: string }) => {
+  const handleSave = (data: {
+    title: string;
+    description: string;
+    isDone?: boolean;
+  }) => {
     if (selectedTodo) {
       handleUpdate({ id: selectedTodo.id, data });
     } else {
@@ -186,6 +246,7 @@ function HomeContent() {
             todo={todo}
             onClick={handleOpenEdit}
             onDelete={handleDelete}
+            onToggleDone={handleToggleDone}
           />
         ))
       ) : (

@@ -78,3 +78,30 @@ func (r *UpdateTodoRequest) Validate() map[string]string {
 	}
 	return nil
 }
+
+type UpdateDoneStatusRequest struct {
+	IsDone *bool `json:"is_done" validate:"required"`
+}
+
+func (r *UpdateDoneStatusRequest) Validate() map[string]string {
+	if err := validate.Struct(r); err != nil {
+		validationErrors, ok := err.(validator.ValidationErrors)
+		if !ok {
+			return map[string]string{"error": "An unexpected error occurred during validation."}
+		}
+
+		errorMessages := make(map[string]string)
+		for _, fe := range validationErrors {
+			field := strings.ToLower(fe.Field())
+			switch field {
+			case "is_done":
+				switch fe.Tag() {
+				case "required":
+					errorMessages["is_done"] = "完了状態は必須です"
+				}
+			}
+		}
+		return errorMessages
+	}
+	return nil
+}

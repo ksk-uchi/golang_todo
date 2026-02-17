@@ -4,6 +4,7 @@ export interface Todo {
   description: string;
   created_at: string;
   updated_at: string;
+  done_at: string | null;
 }
 
 export interface Pagination {

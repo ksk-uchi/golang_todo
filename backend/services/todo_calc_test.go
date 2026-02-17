@@ -71,6 +71,7 @@ func TestTodoService_CalculatePagination(t *testing.T) {
 		}
 
 		for _, tt := range tests {
+			tt := tt
 			t.Run(tt.name, func(t *testing.T) {
 				repo := &spyTodoRepo{
 					count: func(includeDone bool) (int, error) {
@@ -78,11 +79,14 @@ func TestTodoService_CalculatePagination(t *testing.T) {
 					},
 				}
 				ctx := context.Background()
-				service := services.NewTodoService(ctx, slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
+				service := services.NewTodoService(slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
 
-				pagination, err := service.CalculatePagination(tt.currentPage, tt.limit, false)
+				pagination, err := service.CalculatePagination(ctx, tt.currentPage, tt.limit, false)
 
 				assert.NoError(t, err)
+				if err != nil || pagination == nil {
+					return
+				}
 				assert.Equal(t, tt.expected.totalPages, pagination.TotalPages)
 				assert.Equal(t, tt.expected.hasNext, pagination.HasNext)
 				assert.Equal(t, tt.expected.hasPrev, pagination.HasPrev)
@@ -99,9 +103,9 @@ func TestTodoService_CalculatePagination(t *testing.T) {
 			},
 		}
 		ctx := context.Background()
-		service := services.NewTodoService(ctx, slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
+		service := services.NewTodoService(slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
 
-		pagination, err := service.CalculatePagination(1, 20, false)
+		pagination, err := service.CalculatePagination(ctx, 1, 20, false)
 
 		assert.Error(t, err)
 		assert.Nil(t, pagination)

@@ -2,34 +2,38 @@ package repositories
 
 import (
 	"context"
+	"log/slog"
+	"time"
 	"todo-app/ent"
 	"todo-app/ent/todo"
 	"todo-app/ent/user"
 )
 
 type TodoRepository struct {
-	ctx    context.Context
-	client *ent.Client
+	logger *slog.Logger
 }
 
-func NewTodoRepository(ctx context.Context, client *ent.Client) *TodoRepository {
-	return &TodoRepository{ctx: ctx, client: client}
+func NewTodoRepository(logger *slog.Logger) *TodoRepository {
+	return &TodoRepository{logger: logger}
 }
 
-func (r *TodoRepository) getUser() (*ent.User, error) {
-	u := r.ctx.Value("user")
+func (r *TodoRepository) getUser(ctx context.Context) (*ent.User, error) {
+	u := ctx.Value("user")
 	if u == nil {
 		return nil, &ent.NotFoundError{}
 	}
 	return u.(*ent.User), nil
 }
 
-func (r *TodoRepository) FetchTodos(limit int, offset int, includeDone bool) ([]*ent.Todo, error) {
-	u, err := r.getUser()
+// ... Check existing content ...
+
+func (r *TodoRepository) FetchTodos(ctx context.Context, limit int, offset int, includeDone bool) ([]*ent.Todo, error) {
+	u, err := r.getUser(ctx)
 	if err != nil {
 		return nil, err
 	}
-	query := r.client.Todo.Query().
+	client := getEntClient(ctx)
+	query := client.Todo.Query().
 		Where(todo.HasUserWith(user.ID(u.ID)))
 
 	if !includeDone {
@@ -40,81 +44,113 @@ func (r *TodoRepository) FetchTodos(limit int, offset int, includeDone bool) ([]
 		Order(ent.Desc(todo.FieldUpdatedAt), ent.Desc(todo.FieldID)).
 		Limit(limit).
 		Offset(offset).
-		All(r.ctx)
+		All(ctx)
 }
 
-func (r *TodoRepository) GetTodoCount(includeDone bool) (int, error) {
-	u, err := r.getUser()
+func (r *TodoRepository) GetTodoCount(ctx context.Context, includeDone bool) (int, error) {
+	u, err := r.getUser(ctx)
 	if err != nil {
 		return 0, err
 	}
-	query := r.client.Todo.Query().
+	client := getEntClient(ctx)
+	query := client.Todo.Query().
 		Where(todo.HasUserWith(user.ID(u.ID)))
 
 	if !includeDone {
 		query.Where(todo.DoneAtIsNil())
 	}
 
-	return query.Count(r.ctx)
+	return query.Count(ctx)
 }
 
-func (r *TodoRepository) FindTodo(id int) (*ent.Todo, error) {
-	u, err := r.getUser()
+func (r *TodoRepository) FindTodo(ctx context.Context, id int) (*ent.Todo, error) {
+	u, err := r.getUser(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return r.client.Todo.Query().
+	client := getEntClient(ctx)
+	return client.Todo.Query().
 		Where(todo.ID(id)).
 		Where(todo.HasUserWith(user.ID(u.ID))).
-		Only(r.ctx)
+		Only(ctx)
 }
 
-func (r *TodoRepository) CreateTodo(title string, description string) (*ent.Todo, error) {
-	u, err := r.getUser()
+func (r *TodoRepository) CreateTodo(ctx context.Context, title string, description string) (*ent.Todo, error) {
+	u, err := r.getUser(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return r.client.Todo.Create().
+	client := getEntClient(ctx)
+	return client.Todo.Create().
 		SetTitle(title).
 		SetDescription(description).
 		SetUser(u).
-		Save(r.ctx)
+		Save(ctx)
 }
 
-func (r *TodoRepository) UpdateTodo(id int, title *string, description *string) (*ent.Todo, error) {
-	u, err := r.getUser()
+func (r *TodoRepository) UpdateTodo(ctx context.Context, id int, title *string, description *string) (*ent.Todo, error) {
+	u, err := r.getUser(ctx)
 	if err != nil {
 		return nil, err
 	}
-	// Verify ownership before update
-	exists, err := r.client.Todo.Query().
-		Where(todo.ID(id)).
-		Where(todo.HasUserWith(user.ID(u.ID))).
-		Exist(r.ctx)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, &ent.NotFoundError{}
-	}
+	client := getEntClient(ctx)
 
-	return r.client.Todo.UpdateOneID(id).
+	return client.Todo.UpdateOneID(id).
 		Where(todo.HasUserWith(user.ID(u.ID))).
 		SetNillableTitle(title).
 		SetNillableDescription(description).
-		Save(r.ctx)
+		Save(ctx)
 }
 
-func (r *TodoRepository) DeleteTodo(id int) error {
-	u, err := r.getUser()
+func (r *TodoRepository) UpdateDoneStatus(ctx context.Context, id int, isDone bool) (*ent.Todo, error) {
+	u, err := r.getUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	client := getEntClient(ctx)
+
+	update := client.Todo.UpdateOneID(id).
+		Where(todo.HasUserWith(user.ID(u.ID)))
+
+	if isDone {
+		update.SetDoneAt(time.Now())
+	} else {
+		update.ClearDoneAt()
+	}
+
+	return update.Save(ctx)
+}
+
+func (r *TodoRepository) GetTodoForUpdate(ctx context.Context, id int) (*ent.Todo, error) {
+	u, err := r.getUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	client := getEntClient(ctx)
+
+	query := client.Todo.Query().
+		Where(todo.ID(id)).
+		Where(todo.HasUserWith(user.ID(u.ID))).
+		ForUpdate()
+
+	res, err := query.Only(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+func (r *TodoRepository) DeleteTodo(ctx context.Context, id int) error {
+	u, err := r.getUser(ctx)
 	if err != nil {
 		return err
 	}
+	client := getEntClient(ctx)
 	// Verify ownership and delete
-	n, err := r.client.Todo.Delete().
+	n, err := client.Todo.Delete().
 		Where(todo.ID(id)).
 		Where(todo.HasUserWith(user.ID(u.ID))).
-		Exec(r.ctx)
+		Exec(ctx)
 	if err != nil {
 		return err
 	}
