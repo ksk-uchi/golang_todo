@@ -25,6 +25,8 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read
     defaults:
       run:
         working-directory: ./backend
@@ -33,7 +35,10 @@ jobs:
       - uses: ./.github/actions/setup-backend
 
       - name: Run golangci-lint
-        run: golangci-lint run
+        # https://github.com/golangci/golangci-lint-action?tab=readme-ov-file#how-to-use
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.9
 
   test:
     runs-on: ubuntu-latest
