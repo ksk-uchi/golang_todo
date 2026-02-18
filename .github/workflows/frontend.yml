@@ -1,0 +1,33 @@
+name: Frontend CI
+
+on:
+  pull_request:
+    branches: ["main"]
+    paths: ["frontend/**"]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install mise
+        uses: jdx/mise-action@v2
+        with:
+          version: 2025.12.13
+          install: true
+          working_directory: frontend
+          experimental: true
+
+      - name: Install Dependencies
+        run: pnpm install
+
+      - name: Prettier Check
+        run: pnpm exec prettier --check .
+
+      - name: ESLint Check
+        run: pnpm exec eslint .

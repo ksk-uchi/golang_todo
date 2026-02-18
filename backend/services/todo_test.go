@@ -89,7 +89,11 @@ func (s *spyTodoRepo) GetTodoForUpdate(ctx context.Context, id int) (*ent.Todo, 
 
 func TestTodoService_UpdateTodo(t *testing.T) {
 	client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&cache=shared&_fk=1")
-	defer client.Close()
+	defer func() {
+		if err := client.Close(); err != nil {
+			t.Errorf("failed to close client: %v", err)
+		}
+	}()
 
 	t.Run("リポジトリに更新が正常に反映されること", func(t *testing.T) {
 		title := "Updated Title"
@@ -191,7 +195,11 @@ func TestTodoService_UpdateTodo(t *testing.T) {
 
 func TestTodoService_UpdateDoneStatus(t *testing.T) {
 	client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&cache=shared&_fk=1")
-	defer client.Close()
+	defer func() {
+		if err := client.Close(); err != nil {
+			t.Errorf("failed to close client: %v", err)
+		}
+	}()
 
 	t.Run("リポジトリに更新が正常に反映されること", func(t *testing.T) {
 		repo := &spyTodoRepo{

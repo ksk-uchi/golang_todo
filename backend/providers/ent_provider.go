@@ -14,7 +14,7 @@ func NewEntClient() (*ent.Client, func(), error) {
 	}
 
 	cleanup := func() {
-		client.Close()
+		_ = client.Close()
 	}
 
 	return client, cleanup, nil

@@ -5,81 +5,24 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/http/httptest"
 	"os"
-	"strings"
 	"testing"
 	"time"
 	"todo-app/di"
 	"todo-app/dto"
-	"todo-app/ent/enttest"
 	"todo-app/ent/todo"
 
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/joho/godotenv"
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/labstack/echo/v5"
 	_ "github.com/mattn/go-sqlite3" // テスト実行にドライバが必要
 	"github.com/stretchr/testify/assert"
 )
 
-func TestMain(m *testing.M) {
-	if err := godotenv.Load("../envs/test.env"); err != nil {
-		fmt.Println("Error loading .env file:", err)
-		os.Exit(1)
-	}
-	code := m.Run()
-	os.Exit(code)
-}
-
-type avoidCSRF struct{}
-
-func (a avoidCSRF) SetCSRFCookie(req *http.Request) {
-	cookie := &http.Cookie{Name: "csrf_token", Value: "test"}
-	req.AddCookie(cookie)
-}
-
-func (a avoidCSRF) SetCSRFHeader(req *http.Request) {
-	req.Header.Set("X-CSRF-Token", "test")
-}
-
-func createToken(t *testing.T, userID int) string {
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"user_id": float64(userID), // jwt deserializes numbers as float64
-		"exp":     time.Now().Add(time.Hour).Unix(),
-	})
-	tokenString, err := token.SignedString([]byte("secret"))
-	assert.NoError(t, err)
-	return tokenString
-}
-
-func createAuthenticatedRequest(t *testing.T, method, target, body string, userID int) (*http.Request, *httptest.ResponseRecorder) {
-	var req *http.Request
-	if body != "" {
-		req = httptest.NewRequest(method, target, strings.NewReader(body))
-		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-	} else {
-		req = httptest.NewRequest(method, target, nil)
-	}
-	if userID != 0 {
-		cookie := &http.Cookie{Name: "token", Value: createToken(t, userID)}
-		req.AddCookie(cookie)
-	}
-
-	csrf := avoidCSRF{}
-	csrf.SetCSRFCookie(req)
-	csrf.SetCSRFHeader(req)
-
-	rec := httptest.NewRecorder()
-	return req, rec
-}
-
 func TestTodoHandler_ListTodo_Integration(t *testing.T) {
 	t.Run("Todo 一覧取得", func(t *testing.T) {
-		client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
-		defer client.Close()
-
+		cleanupDatabase(t)
 		e := echo.New()
-		app, err := di.InitializeTestApp(e, client)
+		app, err := di.InitializeTestApp(e, testClient)
 		assert.NoError(t, err)
 
 		app.Router.Setup(e)
@@ -89,7 +32,7 @@ func TestTodoHandler_ListTodo_Integration(t *testing.T) {
 			Description string
 			CreatedAt   time.Time
 		}
-		user := client.User.Create().SetName("test").SetEmail("test").SetPassword("test").SaveX(context.Background())
+		user := testClient.User.Create().SetName("test").SetEmail("test").SetPassword("test").SaveX(context.Background())
 		data := []dummyData{
 			{
 				Title:       "Test Title 1",
@@ -109,7 +52,7 @@ func TestTodoHandler_ListTodo_Integration(t *testing.T) {
 		}
 
 		for _, d := range data {
-			client.Todo.Create().
+			testClient.Todo.Create().
 				SetTitle(d.Title).
 				SetDescription(d.Description).
 				SetCreatedAt(d.CreatedAt).
@@ -124,7 +67,7 @@ func TestTodoHandler_ListTodo_Integration(t *testing.T) {
 		assert.Equal(t, http.StatusOK, rec.Code)
 
 		var res dto.ListTodoResponseDto
-		json.Unmarshal(rec.Body.Bytes(), &res)
+		_ = json.Unmarshal(rec.Body.Bytes(), &res)
 		assert.Len(t, res.Data, 3)
 		assert.Equal(t, "Test Title 2", res.Data[0].Title)
 		assert.Equal(t, "Test Title 1", res.Data[1].Title)
@@ -141,26 +84,24 @@ func TestTodoHandler_ListTodo_Integration(t *testing.T) {
 }
 
 func TestTodoHandler_ListTodo_IncludeDone_Integration(t *testing.T) {
-	client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
-	defer client.Close()
-
+	cleanupDatabase(t)
 	e := echo.New()
-	app, err := di.InitializeTestApp(e, client)
+	app, err := di.InitializeTestApp(e, testClient)
 	assert.NoError(t, err)
 
 	app.Router.Setup(e)
 
-	user := client.User.Create().SetName("test").SetEmail("test").SetPassword("test").SaveX(context.Background())
+	user := testClient.User.Create().SetName("test").SetEmail("test").SetPassword("test").SaveX(context.Background())
 
 	// 1. Active Todo
-	client.Todo.Create().
+	testClient.Todo.Create().
 		SetTitle("Active Todo 1").
 		SetDescription("Desc").
 		SetUser(user).
 		SaveX(context.Background())
 
 	// 2. Done Todo
-	client.Todo.Create().
+	testClient.Todo.Create().
 		SetTitle("Done Todo").
 		SetDescription("Desc").
 		SetDoneAt(time.Now()).
@@ -168,7 +109,7 @@ func TestTodoHandler_ListTodo_IncludeDone_Integration(t *testing.T) {
 		SaveX(context.Background())
 
 	// 3. Active Todo
-	client.Todo.Create().
+	testClient.Todo.Create().
 		SetTitle("Active Todo 2").
 		SetDescription("Desc").
 		SetUser(user).
@@ -180,7 +121,7 @@ func TestTodoHandler_ListTodo_IncludeDone_Integration(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, rec.Code)
 		var res dto.ListTodoResponseDto
-		json.Unmarshal(rec.Body.Bytes(), &res)
+		_ = json.Unmarshal(rec.Body.Bytes(), &res)
 		assert.Len(t, res.Data, 2)
 		for _, todo := range res.Data {
 			assert.Contains(t, todo.Title, "Active")
@@ -193,7 +134,7 @@ func TestTodoHandler_ListTodo_IncludeDone_Integration(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, rec.Code)
 		var res dto.ListTodoResponseDto
-		json.Unmarshal(rec.Body.Bytes(), &res)
+		_ = json.Unmarshal(rec.Body.Bytes(), &res)
 		assert.Len(t, res.Data, 3)
 	})
 
@@ -203,23 +144,21 @@ func TestTodoHandler_ListTodo_IncludeDone_Integration(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, rec.Code)
 		var res dto.ListTodoResponseDto
-		json.Unmarshal(rec.Body.Bytes(), &res)
+		_ = json.Unmarshal(rec.Body.Bytes(), &res)
 		assert.Len(t, res.Data, 2)
 	})
 }
 
 func TestTodoHandler_CreateTodo_Integration(t *testing.T) {
 	t.Run("Todo 新規作成", func(t *testing.T) {
-		client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
-		defer client.Close()
-
+		cleanupDatabase(t)
 		e := echo.New()
-		app, err := di.InitializeTestApp(e, client)
+		app, err := di.InitializeTestApp(e, testClient)
 		assert.NoError(t, err)
 
 		app.Router.Setup(e)
 
-		user := client.User.Create().SetName("test").SetEmail("test").SetPassword("test").SaveX(context.Background())
+		user := testClient.User.Create().SetName("test").SetEmail("test").SetPassword("test").SaveX(context.Background())
 		body := `{"title": "New Todo", "description": "New Description"}`
 
 		req, rec := createAuthenticatedRequest(t, http.MethodPost, "/todo", body, user.ID)
@@ -228,26 +167,24 @@ func TestTodoHandler_CreateTodo_Integration(t *testing.T) {
 		assert.Equal(t, http.StatusCreated, rec.Code)
 
 		var res dto.TodoDto
-		json.Unmarshal(rec.Body.Bytes(), &res)
+		_ = json.Unmarshal(rec.Body.Bytes(), &res)
 		assert.Equal(t, "New Todo", res.Title)
 		assert.Equal(t, "New Description", res.Description)
 
 		// DBにも正しく保存されていることを確認
-		count, err := client.Todo.Query().Count(context.Background())
+		count, err := testClient.Todo.Query().Count(context.Background())
 		assert.NoError(t, err)
 		assert.Equal(t, 1, count)
 	})
 
 	t.Run("Todo 新規作成 バリデーションエラー", func(t *testing.T) {
-		client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
-		defer client.Close()
-
+		cleanupDatabase(t)
 		e := echo.New()
-		app, err := di.InitializeTestApp(e, client)
+		app, err := di.InitializeTestApp(e, testClient)
 		assert.NoError(t, err)
 
 		app.Router.Setup(e)
-		user := client.User.Create().SetName("test").SetEmail("test").SetPassword("test").SaveX(context.Background())
+		user := testClient.User.Create().SetName("test").SetEmail("test").SetPassword("test").SaveX(context.Background())
 
 		body := `{"title": "", "description": "New Description"}`
 
@@ -261,11 +198,9 @@ func TestTodoHandler_CreateTodo_Integration(t *testing.T) {
 	})
 
 	t.Run("Todo 新規作成 未認証", func(t *testing.T) {
-		client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
-		defer client.Close()
-
+		cleanupDatabase(t)
 		e := echo.New()
-		app, err := di.InitializeTestApp(e, client)
+		app, err := di.InitializeTestApp(e, testClient)
 		assert.NoError(t, err)
 
 		app.Router.Setup(e)
@@ -286,17 +221,15 @@ func TestTodoHandler_UpdateTodo_Integration(t *testing.T) {
 	}
 
 	t.Run("Todo 更新", func(t *testing.T) {
-		client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
-		defer client.Close()
-
+		cleanupDatabase(t)
 		e := echo.New()
-		app, err := di.InitializeTestApp(e, client)
+		app, err := di.InitializeTestApp(e, testClient)
 		assert.NoError(t, err)
 
 		app.Router.Setup(e)
 
-		user := client.User.Create().SetName("test").SetEmail("test").SetPassword("test").SaveX(context.Background())
-		todo := client.Todo.Create().
+		user := testClient.User.Create().SetName("test").SetEmail("test").SetPassword("test").SaveX(context.Background())
+		todo := testClient.Todo.Create().
 			SetTitle("Old Title").
 			SetDescription("Old Description").
 			SetUser(user).
@@ -310,27 +243,25 @@ func TestTodoHandler_UpdateTodo_Integration(t *testing.T) {
 		assert.Equal(t, http.StatusOK, rec.Code)
 
 		var res dto.TodoDto
-		json.Unmarshal(rec.Body.Bytes(), &res)
+		_ = json.Unmarshal(rec.Body.Bytes(), &res)
 		assert.Equal(t, "Updated Title", res.Title)
 		assert.Equal(t, "Updated Description", res.Description)
 		assert.Equal(t, todo.ID, res.ID)
 
 		// Check DB
-		updatedTodo := client.Todo.GetX(context.Background(), todo.ID)
+		updatedTodo := testClient.Todo.GetX(context.Background(), todo.ID)
 		assert.Equal(t, "Updated Title", updatedTodo.Title)
 		assert.Equal(t, "Updated Description", updatedTodo.Description)
 	})
 
 	t.Run("Todo 更新 存在しないID", func(t *testing.T) {
-		client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
-		defer client.Close()
-
+		cleanupDatabase(t)
 		e := echo.New()
-		app, err := di.InitializeTestApp(e, client)
+		app, err := di.InitializeTestApp(e, testClient)
 		assert.NoError(t, err)
 
 		app.Router.Setup(e)
-		user := client.User.Create().SetName("test").SetEmail("test").SetPassword("test").SaveX(context.Background())
+		user := testClient.User.Create().SetName("test").SetEmail("test").SetPassword("test").SaveX(context.Background())
 
 		body := `{"title": "Updated Title"}`
 
@@ -341,19 +272,17 @@ func TestTodoHandler_UpdateTodo_Integration(t *testing.T) {
 	})
 
 	t.Run("Todo 更新 他人のTodo", func(t *testing.T) {
-		client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
-		defer client.Close()
-
+		cleanupDatabase(t)
 		e := echo.New()
-		app, err := di.InitializeTestApp(e, client)
+		app, err := di.InitializeTestApp(e, testClient)
 		assert.NoError(t, err)
 
 		app.Router.Setup(e)
 
-		user1 := client.User.Create().SetName("user1").SetEmail("user1").SetPassword("user1").SaveX(context.Background())
-		user2 := client.User.Create().SetName("user2").SetEmail("user2").SetPassword("user2").SaveX(context.Background())
+		user1 := testClient.User.Create().SetName("user1").SetEmail("user1").SetPassword("user1").SaveX(context.Background())
+		user2 := testClient.User.Create().SetName("user2").SetEmail("user2").SetPassword("user2").SaveX(context.Background())
 
-		todo := client.Todo.Create().
+		todo := testClient.Todo.Create().
 			SetTitle("User1 Todo").
 			SetDescription("User1 Description").
 			SetUser(user1).
@@ -368,17 +297,15 @@ func TestTodoHandler_UpdateTodo_Integration(t *testing.T) {
 		assert.Equal(t, http.StatusNotFound, rec.Code)
 	})
 	t.Run("Todo 更新 完了済み", func(t *testing.T) {
-		client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
-		defer client.Close()
-
+		cleanupDatabase(t)
 		e := echo.New()
-		app, err := di.InitializeTestApp(e, client)
+		app, err := di.InitializeTestApp(e, testClient)
 		assert.NoError(t, err)
 
 		app.Router.Setup(e)
 
-		user := client.User.Create().SetName("test").SetEmail("test").SetPassword("test").SaveX(context.Background())
-		todo := client.Todo.Create().
+		user := testClient.User.Create().SetName("test").SetEmail("test").SetPassword("test").SaveX(context.Background())
+		todo := testClient.Todo.Create().
 			SetTitle("Done Todo").
 			SetDescription("Description").
 			SetDoneAt(time.Now()).
@@ -397,17 +324,15 @@ func TestTodoHandler_UpdateTodo_Integration(t *testing.T) {
 
 func TestTodoHandler_DeleteTodo_Integration(t *testing.T) {
 	t.Run("Todo 削除", func(t *testing.T) {
-		client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
-		defer client.Close()
-
+		cleanupDatabase(t)
 		e := echo.New()
-		app, err := di.InitializeTestApp(e, client)
+		app, err := di.InitializeTestApp(e, testClient)
 		assert.NoError(t, err)
 
 		app.Router.Setup(e)
 
-		user := client.User.Create().SetName("test").SetEmail("test").SetPassword("test").SaveX(context.Background())
-		todo := client.Todo.Create().
+		user := testClient.User.Create().SetName("test").SetEmail("test").SetPassword("test").SaveX(context.Background())
+		todo := testClient.Todo.Create().
 			SetTitle("To Be Deleted").
 			SetDescription("Description").
 			SetUser(user).
@@ -419,21 +344,19 @@ func TestTodoHandler_DeleteTodo_Integration(t *testing.T) {
 		assert.Equal(t, http.StatusNoContent, rec.Code)
 
 		// DBから消えているか確認
-		count, err := client.Todo.Query().Count(context.Background())
+		count, err := testClient.Todo.Query().Count(context.Background())
 		assert.NoError(t, err)
 		assert.Equal(t, 0, count)
 	})
 
 	t.Run("Todo 削除 存在しないID", func(t *testing.T) {
-		client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
-		defer client.Close()
-
+		cleanupDatabase(t)
 		e := echo.New()
-		app, err := di.InitializeTestApp(e, client)
+		app, err := di.InitializeTestApp(e, testClient)
 		assert.NoError(t, err)
 
 		app.Router.Setup(e)
-		user := client.User.Create().SetName("test").SetEmail("test").SetPassword("test").SaveX(context.Background())
+		user := testClient.User.Create().SetName("test").SetEmail("test").SetPassword("test").SaveX(context.Background())
 
 		req, rec := createAuthenticatedRequest(t, http.MethodDelete, "/todo/999", "", user.ID)
 		e.ServeHTTP(rec, req)
@@ -442,19 +365,17 @@ func TestTodoHandler_DeleteTodo_Integration(t *testing.T) {
 	})
 
 	t.Run("Todo 削除 他人のTodo", func(t *testing.T) {
-		client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&_fk=1")
-		defer client.Close()
-
+		cleanupDatabase(t)
 		e := echo.New()
-		app, err := di.InitializeTestApp(e, client)
+		app, err := di.InitializeTestApp(e, testClient)
 		assert.NoError(t, err)
 
 		app.Router.Setup(e)
 
-		user1 := client.User.Create().SetName("user1").SetEmail("user1").SetPassword("user1").SaveX(context.Background())
-		user2 := client.User.Create().SetName("user2").SetEmail("user2").SetPassword("user2").SaveX(context.Background())
+		user1 := testClient.User.Create().SetName("user1").SetEmail("user1").SetPassword("user1").SaveX(context.Background())
+		user2 := testClient.User.Create().SetName("user2").SetEmail("user2").SetPassword("user2").SaveX(context.Background())
 
-		targetTodo := client.Todo.Create().
+		targetTodo := testClient.Todo.Create().
 			SetTitle("To Be Deleted").
 			SetDescription("Description").
 			SetUser(user1).
@@ -466,7 +387,7 @@ func TestTodoHandler_DeleteTodo_Integration(t *testing.T) {
 		assert.Equal(t, http.StatusNoContent, rec.Code)
 
 		// Ensure it was NOT deleted
-		exists := client.Todo.Query().Where(todo.ID(targetTodo.ID)).ExistX(context.Background())
+		exists := testClient.Todo.Query().Where(todo.ID(targetTodo.ID)).ExistX(context.Background())
 		assert.True(t, exists)
 	})
 }
@@ -476,32 +397,16 @@ func TestTodoHandler_UpdateDoneStatus(t *testing.T) {
 		t.Skip("TEST_WITH_REAL_DB is not set. Skipping integration test that requires real DB (e.g. MySQL) for SELECT FOR UPDATE.")
 	}
 
-	// Real DB connection logic would be needed here instead of sqlite memory if we want to run this.
-	// But assuming the user will set up MySQL container in CI.
-	// For now, we keep sqlite but expect it to fail if we run it.
-	// However, if we skip, it won't run.
-
-	// Since we removed the fallback, sqlite will fail on ForUpdate.
-	// So we must skip this test when using sqlite enttest.
-
-	// If we are really running this, we need a real DB.
-	// This test file uses enttest.Open which defaults to sqlite unless configured otherwise.
-	// To support real DB testing, we would need to change how client is created.
-
-	// For this task, I will add the skip logic and keep the structure compatible with what would be a real DB test.
-
-	client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&cache=shared&_fk=1")
-	defer client.Close()
-
 	t.Run("成功時", func(t *testing.T) {
+		cleanupDatabase(t)
 		e := echo.New()
-		app, err := di.InitializeTestApp(e, client)
+		app, err := di.InitializeTestApp(e, testClient)
 		assert.NoError(t, err)
 
 		app.Router.Setup(e)
 
-		user := client.User.Create().SetName("test").SetEmail("test").SetPassword("test").SaveX(context.Background())
-		todo := client.Todo.Create().
+		user := testClient.User.Create().SetName("test").SetEmail("test").SetPassword("test").SaveX(context.Background())
+		todo := testClient.Todo.Create().
 			SetTitle("Todo").
 			SetDescription("Desc").
 			SetUser(user).
@@ -517,18 +422,19 @@ func TestTodoHandler_UpdateDoneStatus(t *testing.T) {
 		assert.Contains(t, rec.Body.String(), "\"done_at\"")
 
 		// Verify DB
-		updatedTodo := client.Todo.GetX(context.Background(), todo.ID)
+		updatedTodo := testClient.Todo.GetX(context.Background(), todo.ID)
 		assert.NotNil(t, updatedTodo.DoneAt)
 	})
 
 	t.Run("バリデーションエラー", func(t *testing.T) {
+		cleanupDatabase(t)
 		e := echo.New()
-		app, err := di.InitializeTestApp(e, client)
+		app, err := di.InitializeTestApp(e, testClient)
 		assert.NoError(t, err)
 
 		app.Router.Setup(e)
-		user := client.User.Create().SetName("test").SetEmail("test").SetPassword("test").SaveX(context.Background())
-		todo := client.Todo.Create().
+		user := testClient.User.Create().SetName("test").SetEmail("test").SetPassword("test").SaveX(context.Background())
+		todo := testClient.Todo.Create().
 			SetTitle("Todo").
 			SetDescription("Desc").
 			SetUser(user).
@@ -544,12 +450,13 @@ func TestTodoHandler_UpdateDoneStatus(t *testing.T) {
 	})
 
 	t.Run("Todoが見つからない場合", func(t *testing.T) {
+		cleanupDatabase(t)
 		e := echo.New()
-		app, err := di.InitializeTestApp(e, client)
+		app, err := di.InitializeTestApp(e, testClient)
 		assert.NoError(t, err)
 
 		app.Router.Setup(e)
-		user := client.User.Create().SetName("test").SetEmail("test").SetPassword("test").SaveX(context.Background())
+		user := testClient.User.Create().SetName("test").SetEmail("test").SetPassword("test").SaveX(context.Background())
 
 		reqBody := map[string]interface{}{"is_done": true}
 		body, _ := json.Marshal(reqBody)

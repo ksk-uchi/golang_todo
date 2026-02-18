@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
 	"strconv"
 
 	"todo-app/ent"
@@ -19,9 +20,14 @@ func main() {
 	client, err := ent.Open("mysql", "user:password@tcp(localhost:3306)/todo_db?parseTime=True")
 	if err != nil {
 		fmt.Println(err)
-		return
+		os.Exit(1)
 	}
-	defer client.Close()
+	defer func() {
+		if err := client.Close(); err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+	}()
 
 	var todos []Todo
 	for i := 0; i < 1000; i++ {
@@ -39,7 +45,7 @@ func main() {
 
 	if err != nil {
 		fmt.Println(err)
-		return
+		os.Exit(1)
 	}
 	fmt.Println(len(createdTodos))
 }

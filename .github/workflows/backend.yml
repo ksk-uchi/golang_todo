@@ -1,0 +1,62 @@
+name: Backend
+
+on:
+  push:
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend.yml"
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: ./backend
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-backend
+
+      - name: Check format
+        run: |
+          go version
+          test -z $(gofmt -l .)
+
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: ./backend
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-backend
+
+      - name: Run golangci-lint
+        # https://github.com/golangci/golangci-lint-action?tab=readme-ov-file#how-to-use
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.9
+          working-directory: ./backend
+
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: ./backend
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-backend
+
+      - name: Start MySQL Container
+        run: docker compose -f docker-compose.yml up -d --wait db
+
+      - name: Run Tests
+        env:
+          APP_ENV: ci
+        run: |
+          mise unset APP_ENV
+          go test ./...

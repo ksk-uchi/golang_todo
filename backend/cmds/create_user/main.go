@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"todo-app/ent"
 
@@ -23,14 +24,19 @@ func main() {
 	client, err := ent.Open("mysql", "user:password@tcp(localhost:3306)/todo_db?parseTime=True")
 	if err != nil {
 		fmt.Println(err)
-		return
+		os.Exit(1)
 	}
-	defer client.Close()
+	defer func() {
+		if err := client.Close(); err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+	}()
 
 	password, err := hashPassword("password")
 	if err != nil {
 		fmt.Println(err)
-		return
+		os.Exit(1)
 	}
 	user, err := client.User.Create().
 		SetName("keisuke").
@@ -40,7 +46,7 @@ func main() {
 
 	if err != nil {
 		fmt.Println(err)
-		return
+		os.Exit(1)
 	}
 	fmt.Println(user.String())
 }

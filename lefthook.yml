@@ -3,7 +3,7 @@ pre-commit:
     backend-fmt:
       root: "backend/"
       glob: "*.{go}"
-      run: gofmt -w {staged_files} && go mod tidy && git add {staged_files}
+      run: gofmt -w {staged_files} && golangci-lint run && go mod tidy && git add {staged_files}
     frontend-fmt:
       root: "frontend/"
       glob: "*.{ts,tsx,mjs}"

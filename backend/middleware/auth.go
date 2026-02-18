@@ -87,6 +87,7 @@ func (m *AuthMiddleware) Authenticate(next echo.HandlerFunc) echo.HandlerFunc {
 			c.SetCookie(newCookie)
 		}
 
+		//nolint:staticcheck
 		ctx := context.WithValue(c.Request().Context(), "user", user)
 		c.SetRequest(c.Request().WithContext(ctx))
 

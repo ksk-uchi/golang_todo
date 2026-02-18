@@ -100,13 +100,13 @@ func (s *TodoService) UpdateTodo(ctx context.Context, id int, title *string, des
 
 	_, err = s.repo.GetTodoForUpdate(txCtx, id)
 	if err != nil {
-		tx.Rollback()
+		_ = tx.Rollback()
 		return nil, err
 	}
 
 	updatedTodo, err := s.repo.UpdateTodo(txCtx, id, title, description)
 	if err != nil {
-		tx.Rollback()
+		_ = tx.Rollback()
 		return nil, err
 	}
 
@@ -130,17 +130,17 @@ func (s *TodoService) UpdateDoneStatus(ctx context.Context, id int, isDone bool)
 
 	todo, err := s.repo.GetTodoForUpdate(txCtx, id)
 	if err != nil {
-		tx.Rollback()
+		_ = tx.Rollback()
 		return nil, err
 	}
 
 	// Check if update is needed
 	if isDone && todo.DoneAt != nil {
-		tx.Rollback()
+		_ = tx.Rollback()
 		return todo, nil
 	}
 	if !isDone && todo.DoneAt == nil {
-		tx.Rollback()
+		_ = tx.Rollback()
 		return todo, nil
 	}
 
