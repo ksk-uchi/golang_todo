@@ -1,7 +1,7 @@
-import { Button } from "@/app/components/ui/button";
-import { Card, CardAction, CardContent } from "@/app/components/ui/card";
-import { Checkbox } from "@/app/components/ui/checkbox";
-import { TypographyP } from "@/app/components/ui/typography";
+import { Button } from "@/components/ui/button";
+import { Card, CardAction, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { TypographyP } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import { Todo } from "@/types";
 import { Trash2 } from "lucide-react";

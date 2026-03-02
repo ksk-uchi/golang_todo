@@ -193,7 +193,7 @@ func TestTodoHandler_CreateTodo_Integration(t *testing.T) {
 
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
 
-		expected := `{"error":{"title":"タイトルは必須です"}}`
+		expected := `{"error":{"title":"titleは必須フィールドです"}}`
 		assert.JSONEq(t, expected, rec.Body.String())
 	})
 

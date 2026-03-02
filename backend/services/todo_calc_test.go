@@ -79,7 +79,7 @@ func TestTodoService_CalculatePagination(t *testing.T) {
 					},
 				}
 				ctx := context.Background()
-				service := services.NewTodoService(slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
+				service := services.NewTodoService(nil, slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
 
 				pagination, err := service.CalculatePagination(ctx, tt.currentPage, tt.limit, false)
 
@@ -103,7 +103,7 @@ func TestTodoService_CalculatePagination(t *testing.T) {
 			},
 		}
 		ctx := context.Background()
-		service := services.NewTodoService(slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
+		service := services.NewTodoService(nil, slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
 
 		pagination, err := service.CalculatePagination(ctx, 1, 20, false)
 

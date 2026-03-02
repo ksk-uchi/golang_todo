@@ -10,11 +10,20 @@ import (
 )
 
 type TodoRepository struct {
+	client *ent.Client
 	logger *slog.Logger
 }
 
-func NewTodoRepository(logger *slog.Logger) *TodoRepository {
-	return &TodoRepository{logger: logger}
+func NewTodoRepository(client *ent.Client, logger *slog.Logger) *TodoRepository {
+	return &TodoRepository{client: client, logger: logger}
+}
+
+func (r *TodoRepository) getClient(ctx context.Context) *ent.Client {
+	tx := ent.TxFromContext(ctx)
+	if tx != nil {
+		return tx.Client()
+	}
+	return r.client
 }
 
 func (r *TodoRepository) getUser(ctx context.Context) (*ent.User, error) {
@@ -32,7 +41,7 @@ func (r *TodoRepository) FetchTodos(ctx context.Context, limit int, offset int, 
 	if err != nil {
 		return nil, err
 	}
-	client := getEntClient(ctx)
+	client := r.getClient(ctx)
 	query := client.Todo.Query().
 		Where(todo.HasUserWith(user.ID(u.ID)))
 
@@ -52,7 +61,7 @@ func (r *TodoRepository) GetTodoCount(ctx context.Context, includeDone bool) (in
 	if err != nil {
 		return 0, err
 	}
-	client := getEntClient(ctx)
+	client := r.getClient(ctx)
 	query := client.Todo.Query().
 		Where(todo.HasUserWith(user.ID(u.ID)))
 
@@ -68,7 +77,7 @@ func (r *TodoRepository) FindTodo(ctx context.Context, id int) (*ent.Todo, error
 	if err != nil {
 		return nil, err
 	}
-	client := getEntClient(ctx)
+	client := r.getClient(ctx)
 	return client.Todo.Query().
 		Where(todo.ID(id)).
 		Where(todo.HasUserWith(user.ID(u.ID))).
@@ -80,7 +89,7 @@ func (r *TodoRepository) CreateTodo(ctx context.Context, title string, descripti
 	if err != nil {
 		return nil, err
 	}
-	client := getEntClient(ctx)
+	client := r.getClient(ctx)
 	return client.Todo.Create().
 		SetTitle(title).
 		SetDescription(description).
@@ -93,7 +102,7 @@ func (r *TodoRepository) UpdateTodo(ctx context.Context, id int, title *string, 
 	if err != nil {
 		return nil, err
 	}
-	client := getEntClient(ctx)
+	client := r.getClient(ctx)
 
 	return client.Todo.UpdateOneID(id).
 		Where(todo.HasUserWith(user.ID(u.ID))).
@@ -107,7 +116,7 @@ func (r *TodoRepository) UpdateDoneStatus(ctx context.Context, id int, isDone bo
 	if err != nil {
 		return nil, err
 	}
-	client := getEntClient(ctx)
+	client := r.getClient(ctx)
 
 	update := client.Todo.UpdateOneID(id).
 		Where(todo.HasUserWith(user.ID(u.ID)))
@@ -126,7 +135,7 @@ func (r *TodoRepository) GetTodoForUpdate(ctx context.Context, id int) (*ent.Tod
 	if err != nil {
 		return nil, err
 	}
-	client := getEntClient(ctx)
+	client := r.getClient(ctx)
 
 	query := client.Todo.Query().
 		Where(todo.ID(id)).
@@ -145,7 +154,7 @@ func (r *TodoRepository) DeleteTodo(ctx context.Context, id int) error {
 	if err != nil {
 		return err
 	}
-	client := getEntClient(ctx)
+	client := r.getClient(ctx)
 	// Verify ownership and delete
 	n, err := client.Todo.Delete().
 		Where(todo.ID(id)).

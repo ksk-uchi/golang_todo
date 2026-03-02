@@ -1,19 +1,20 @@
 import axios from "axios";
+import Cookies from "js-cookie";
 
 export const api = axios.create({
-  baseURL: "http://localhost:8080",
+  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080",
   headers: {
     "Content-Type": "application/json",
-    "X-CSRF-Token":
-      typeof document !== "undefined"
-        ? document.cookie
-            .split(";")
-            .map((c) => c.trim())
-            .find((cookie) => cookie.startsWith("csrf_token="))
-            ?.split("=")[1]
-        : "",
   },
   withCredentials: true,
+});
+
+api.interceptors.request.use((config) => {
+  const csrfToken = Cookies.get("csrf_token");
+  if (csrfToken) {
+    config.headers["X-CSRF-Token"] = csrfToken;
+  }
+  return config;
 });
 
 api.interceptors.response.use(

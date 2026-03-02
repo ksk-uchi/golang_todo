@@ -1,30 +1,40 @@
 package handlers
 
 import (
+	"errors"
+	"log/slog"
 	"net/http"
 
 	"todo-app/dto"
 	"todo-app/services"
+	"todo-app/utils"
 	"todo-app/validators"
 
 	"github.com/labstack/echo/v5"
 )
 
 type AuthHandler struct {
+	logger  *slog.Logger
 	service services.IAuthService
 }
 
-func NewAuthHandler(service services.IAuthService) *AuthHandler {
-	return &AuthHandler{service: service}
+func NewAuthHandler(logger *slog.Logger, service services.IAuthService) *AuthHandler {
+	return &AuthHandler{
+		logger:  logger,
+		service: service,
+	}
 }
 
 func (h *AuthHandler) Login(c *echo.Context) error {
+	utils.LogRequest(h.logger, c)
+
 	var req validators.LoginRequest
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request"})
+		return utils.HandleError(h.logger, c, errors.New("invalid request"), http.StatusBadRequest)
 	}
 
 	if errs := req.Validate(); errs != nil {
+		h.logger.Error("validation error", slog.Any("errors", errs))
 		return c.JSON(http.StatusBadRequest, map[string]interface{}{"error": errs})
 	}
 
@@ -35,7 +45,7 @@ func (h *AuthHandler) Login(c *echo.Context) error {
 
 	token, err := h.service.Login(c.Request().Context(), input)
 	if err != nil {
-		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "invalid email or password"})
+		return utils.HandleError(h.logger, c, errors.New("invalid email or password"), http.StatusUnauthorized)
 	}
 
 	cookie := new(http.Cookie)

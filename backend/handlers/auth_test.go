@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -26,6 +28,7 @@ func (m *MockAuthService) Login(ctx context.Context, req *dto.LoginInput) (strin
 
 func TestAuthHandler_Login(t *testing.T) {
 	e := echo.New()
+	logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
 
 	tests := []struct {
 		name           string
@@ -64,7 +67,7 @@ func TestAuthHandler_Login(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockService := new(MockAuthService)
-			handler := NewAuthHandler(mockService)
+			handler := NewAuthHandler(logger, mockService)
 
 			req := httptest.NewRequest(http.MethodPost, "/auth/login", strings.NewReader(tt.reqBody))
 			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)

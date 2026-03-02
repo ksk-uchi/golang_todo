@@ -117,7 +117,7 @@ func TestTodoService_UpdateTodo(t *testing.T) {
 		}
 		ctx := context.Background()
 		ctx = ent.NewContext(ctx, client)
-		service := services.NewTodoService(slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
+		service := services.NewTodoService(client, slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
 
 		result, err := service.UpdateTodo(ctx, 1, &title, &desc)
 
@@ -145,7 +145,7 @@ func TestTodoService_UpdateTodo(t *testing.T) {
 		}
 		ctx := context.Background()
 		ctx = ent.NewContext(ctx, client)
-		service := services.NewTodoService(slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
+		service := services.NewTodoService(client, slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
 
 		result, err := service.UpdateTodo(ctx, 1, &title, nil)
 
@@ -182,7 +182,7 @@ func TestTodoService_UpdateTodo(t *testing.T) {
 		}
 		ctx := context.Background()
 		ctx = ent.NewContext(ctx, client)
-		service := services.NewTodoService(slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
+		service := services.NewTodoService(client, slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
 
 		result, err := service.UpdateTodo(ctx, 1, nil, nil)
 
@@ -223,7 +223,7 @@ func TestTodoService_UpdateDoneStatus(t *testing.T) {
 		}
 		ctx := context.Background()
 		ctx = ent.NewContext(ctx, client)
-		service := services.NewTodoService(slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
+		service := services.NewTodoService(client, slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
 
 		result, err := service.UpdateDoneStatus(ctx, 1, true)
 
@@ -249,7 +249,7 @@ func TestTodoService_UpdateDoneStatus(t *testing.T) {
 		}
 		ctx := context.Background()
 		ctx = ent.NewContext(ctx, client)
-		service := services.NewTodoService(slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
+		service := services.NewTodoService(client, slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
 
 		result, err := service.UpdateDoneStatus(ctx, 1, true)
 
@@ -260,6 +260,13 @@ func TestTodoService_UpdateDoneStatus(t *testing.T) {
 }
 
 func TestTodoService_DeleteTodo(t *testing.T) {
+	client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&cache=shared&_fk=1")
+	defer func() {
+		if err := client.Close(); err != nil {
+			t.Errorf("failed to close client: %v", err)
+		}
+	}()
+
 	t.Run("リポジトリの削除が正常に終了すること", func(t *testing.T) {
 		repo := &spyTodoRepo{
 			delete: func(id int) error {
@@ -267,7 +274,7 @@ func TestTodoService_DeleteTodo(t *testing.T) {
 			},
 		}
 		ctx := context.Background()
-		service := services.NewTodoService(slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
+		service := services.NewTodoService(client, slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
 
 		err := service.DeleteTodo(ctx, 1)
 
@@ -281,7 +288,7 @@ func TestTodoService_DeleteTodo(t *testing.T) {
 			},
 		}
 		ctx := context.Background()
-		service := services.NewTodoService(slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
+		service := services.NewTodoService(client, slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
 
 		err := service.DeleteTodo(ctx, 1)
 

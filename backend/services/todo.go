@@ -6,18 +6,8 @@ import (
 	"todo-app/app_errors"
 	"todo-app/dto"
 	"todo-app/ent"
-	"todo-app/repositories"
 	"todo-app/utils"
 )
-
-type TodoServiceFactory func(*slog.Logger) (*TodoService, error)
-
-func ProvideTodoServiceFactory() TodoServiceFactory {
-	return func(logger *slog.Logger) (*TodoService, error) {
-		repo := repositories.NewTodoRepository(logger)
-		return NewTodoService(logger, repo), nil
-	}
-}
 
 type ITodoRepository interface {
 	FetchTodos(ctx context.Context, limit int, offset int, includeDone bool) ([]*ent.Todo, error)
@@ -30,14 +20,16 @@ type ITodoRepository interface {
 	DeleteTodo(ctx context.Context, id int) error
 }
 
-func NewTodoService(logger *slog.Logger, repo ITodoRepository) *TodoService {
+func NewTodoService(client *ent.Client, logger *slog.Logger, repo ITodoRepository) *TodoService {
 	return &TodoService{
+		client: client,
 		logger: logger,
 		repo:   repo,
 	}
 }
 
 type TodoService struct {
+	client *ent.Client
 	logger *slog.Logger
 	repo   ITodoRepository
 }
@@ -92,8 +84,7 @@ func (s *TodoService) UpdateTodo(ctx context.Context, id int, title *string, des
 		return nil, app_errors.ErrTodoAlreadyDone
 	}
 
-	client := ent.FromContext(ctx)
-	txCtx, tx, err := utils.WithTx(ctx, client)
+	txCtx, tx, err := utils.WithTx(ctx, s.client)
 	if err != nil {
 		return nil, err
 	}
@@ -122,8 +113,7 @@ func (s *TodoService) DeleteTodo(ctx context.Context, id int) error {
 }
 
 func (s *TodoService) UpdateDoneStatus(ctx context.Context, id int, isDone bool) (*ent.Todo, error) {
-	client := ent.FromContext(ctx)
-	txCtx, tx, err := utils.WithTx(ctx, client)
+	txCtx, tx, err := utils.WithTx(ctx, s.client)
 	if err != nil {
 		return nil, err
 	}
