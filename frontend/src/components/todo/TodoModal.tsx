@@ -15,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Todo } from "@/types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect } from "react";
-import { Controller, useForm } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 
 const todoSchema = z.object({
@@ -48,7 +48,6 @@ export function TodoModal({
     handleSubmit,
     control,
     reset,
-    watch,
     formState: { errors },
   } = useForm<TodoFormValues>({
     resolver: zodResolver(todoSchema),
@@ -73,7 +72,7 @@ export function TodoModal({
     onSave(data);
   };
 
-  const isDoneValue = watch("isDone");
+  const isDoneValue = useWatch({ control, name: "isDone" });
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
