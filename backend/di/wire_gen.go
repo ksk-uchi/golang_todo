@@ -27,12 +27,13 @@ func InitializeApp() (*App, func(), error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	todoServiceFactory := services.ProvideTodoServiceFactory()
-	todoHandler := handlers.NewTodoHandler(logger, client, todoServiceFactory)
+	todoRepository := repositories.NewTodoRepository(client, logger)
+	todoService := services.NewTodoService(client, logger, todoRepository)
+	todoHandler := handlers.NewTodoHandler(logger, todoService)
 	todoRouter := routes.NewTodoRouter(todoHandler)
 	userRepository := repositories.NewUserRepository(client)
 	authService := services.NewAuthService(userRepository)
-	authHandler := handlers.NewAuthHandler(authService)
+	authHandler := handlers.NewAuthHandler(logger, authService)
 	authRouter := routes.NewAuthRouter(authHandler)
 	authMiddleware := middleware.NewAuthMiddleware(userRepository)
 	router := routes.NewRouter(todoRouter, authRouter, authMiddleware)
@@ -44,12 +45,13 @@ func InitializeApp() (*App, func(), error) {
 
 func InitializeTestApp(e *echo.Echo, client *ent.Client) (*App, error) {
 	logger := NewLogger()
-	todoServiceFactory := services.ProvideTodoServiceFactory()
-	todoHandler := handlers.NewTodoHandler(logger, client, todoServiceFactory)
+	todoRepository := repositories.NewTodoRepository(client, logger)
+	todoService := services.NewTodoService(client, logger, todoRepository)
+	todoHandler := handlers.NewTodoHandler(logger, todoService)
 	todoRouter := routes.NewTodoRouter(todoHandler)
 	userRepository := repositories.NewUserRepository(client)
 	authService := services.NewAuthService(userRepository)
-	authHandler := handlers.NewAuthHandler(authService)
+	authHandler := handlers.NewAuthHandler(logger, authService)
 	authRouter := routes.NewAuthRouter(authHandler)
 	authMiddleware := middleware.NewAuthMiddleware(userRepository)
 	router := routes.NewRouter(todoRouter, authRouter, authMiddleware)
@@ -60,7 +62,7 @@ func InitializeTestApp(e *echo.Echo, client *ent.Client) (*App, error) {
 // wire.go:
 
 // todo
-var todoSet = wire.NewSet(handlers.NewTodoHandler, routes.NewTodoRouter, services.ProvideTodoServiceFactory)
+var todoSet = wire.NewSet(repositories.NewTodoRepository, wire.Bind(new(services.ITodoRepository), new(*repositories.TodoRepository)), services.NewTodoService, handlers.NewTodoHandler, routes.NewTodoRouter)
 
 // auth
 var authSet = wire.NewSet(repositories.NewUserRepository, wire.Bind(new(repositories.IUserRepository), new(*repositories.UserRepository)), services.NewAuthService, wire.Bind(new(services.IAuthService), new(*services.AuthService)), handlers.NewAuthHandler, routes.NewAuthRouter, middleware.NewAuthMiddleware)

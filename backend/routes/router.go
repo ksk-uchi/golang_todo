@@ -1,8 +1,12 @@
 package routes
 
 import (
+	"crypto/rand"
+	"encoding/base64"
+	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"todo-app/middleware"
 
 	"github.com/labstack/echo/v5"
@@ -24,8 +28,17 @@ type Router struct {
 }
 
 func (r *Router) Setup(e *echo.Echo) {
+	origins := os.Getenv("CORS_ALLOWED_ORIGINS")
+	if origins == "" {
+		origins = os.Getenv("FRONTEND_ORIGIN")
+	}
+	if origins == "" {
+		origins = "http://localhost:3000"
+	}
+	allowOrigins := strings.Split(origins, ",")
+
 	e.Use(echoMiddleware.CORSWithConfig(echoMiddleware.CORSConfig{
-		AllowOrigins: []string{"http://localhost:3000"},
+		AllowOrigins: allowOrigins,
 		AllowMethods: []string{
 			http.MethodGet,
 			http.MethodPost,
@@ -56,10 +69,36 @@ func (r *Router) Setup(e *echo.Echo) {
 		CookiePath:     "/",
 		CookieSameSite: http.SameSiteStrictMode,
 	}))
-	// XSS 対策
+
+	// CSP Nonce の動的生成 middleware
+	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c *echo.Context) error {
+			nonce := make([]byte, 16)
+			if _, err := rand.Read(nonce); err != nil {
+				return err
+			}
+			nonceStr := base64.StdEncoding.EncodeToString(nonce)
+			c.Set("nonce", nonceStr)
+			return next(c)
+		}
+	})
+
+	// XSS 対策 (Secure 内部の CSP はここでは使わず、個別に Header を設定)
 	e.Use(echoMiddleware.SecureWithConfig(echoMiddleware.SecureConfig{
-		ContentSecurityPolicy: "default-src 'self'; script-src 'self' 'nonce-random123'; object-src 'none'; base-uri 'self';",
+		// Static な CSP は空にし、middleware で動的に設定する
 	}))
+	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c *echo.Context) error {
+			nonceVal := c.Get("nonce")
+			if nonceVal == nil {
+				return next(c)
+			}
+			nonce := nonceVal.(string)
+			csp := fmt.Sprintf("default-src 'self'; script-src 'self' 'nonce-%s'; object-src 'none'; base-uri 'self';", nonce)
+			c.Response().Header().Set(echo.HeaderContentSecurityPolicy, csp)
+			return next(c)
+		}
+	})
 
 	r.auth.SetupAuthRoute(e.Group("/auth"))
 	r.todo.SetupTodoRoute(e.Group("/todo"))
