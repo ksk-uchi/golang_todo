@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 	"time"
-	"todo-app/cmds/check_genai/function_declerations"
+	function_declerations "todo-app/cmds/check_genai/function_declerations"
 
 	"github.com/joho/godotenv"
 	"google.golang.org/genai"
@@ -23,6 +23,7 @@ func processUserInput(ctx context.Context, client *genai.Client, inputText strin
 	// }
 	parts := []*genai.Part{
 		{Text: time.Now().Format("現在2006年1月2日15:04:05です。")},
+		{Text: "使用できる Tool が無い場合は「対応できる Tool がありません」とだけ回答するようにしてください。"},
 		{Text: inputText},
 	}
 	result, err := client.Models.GenerateContent(ctx,
@@ -46,6 +47,7 @@ func processUserInput(ctx context.Context, client *genai.Client, inputText strin
 	}
 	fc := result.Candidates[0].Content.Parts[0].FunctionCall
 	if fc == nil {
+		fmt.Println(result.Text())
 		return fmt.Errorf("function call not found")
 	}
 	if fc.Name == "listTodosByCondition" {
@@ -72,8 +74,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	text := "直近完了したタスクを見たい"
-	// text := "今日はなんの記念日ですか？"
+	// text := "直近完了したタスクを見たい"
+	text := "今日はなんの記念日ですか？"
 	if err := processUserInput(ctx, client, text); err != nil {
 		fmt.Println(err)
 		os.Exit(1)

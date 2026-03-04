@@ -1,4 +1,4 @@
-package function_declerations
+package check_genai_function_declerations
 
 import (
 	"context"
