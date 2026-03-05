@@ -24,6 +24,8 @@ var todoSet = wire.NewSet(
 	wire.Bind(new(repositories.ITodoFilterHistoryRepository), new(*repositories.TodoFilterHistoryRepository)),
 	services.NewTodoService,
 	services.NewAIService,
+	services.NewTodoFilterHistoryService,
+	wire.Bind(new(services.ITodoFilterHistoryService), new(*services.TodoFilterHistoryService)),
 	handlers.NewTodoHandler,
 	routes.NewTodoRouter,
 )
