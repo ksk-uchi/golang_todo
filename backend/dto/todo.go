@@ -32,6 +32,15 @@ type AIFilterDto struct {
 	Args         map[string]interface{} `json:"args"`
 }
 
+type TodoFilterHistoryQueryDto struct {
+	Query string `json:"query"`
+	ID    string `json:"id"`
+}
+
+type ListTodoFilterHistoriesResponseDto struct {
+	Queries []TodoFilterHistoryQueryDto `json:"queries"`
+}
+
 func EntityToTodoDto(todo *ent.Todo) TodoDto {
 	return TodoDto{
 		ID:          todo.ID,
@@ -41,4 +50,15 @@ func EntityToTodoDto(todo *ent.Todo) TodoDto {
 		UpdatedAt:   todo.UpdatedAt,
 		DoneAt:      todo.DoneAt,
 	}
+}
+
+func EntitiesToTodoFilterHistoryQueryDtos(histories []*ent.TodoFilterHistory) []TodoFilterHistoryQueryDto {
+	dtos := make([]TodoFilterHistoryQueryDto, len(histories))
+	for i, h := range histories {
+		dtos[i] = TodoFilterHistoryQueryDto{
+			Query: h.Query,
+			ID:    h.ID.String(),
+		}
+	}
+	return dtos
 }

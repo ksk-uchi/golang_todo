@@ -37,22 +37,11 @@ func (h *TodoHandler) ListTodoFilterHistories(c *echo.Context) error {
 		return utils.HandleError(h.logger, c, err, http.StatusInternalServerError)
 	}
 
-	type filterQuery struct {
-		Query string `json:"query"`
-		ID    string `json:"id"`
+	res := dto.ListTodoFilterHistoriesResponseDto{
+		Queries: dto.EntitiesToTodoFilterHistoryQueryDtos(histories),
 	}
 
-	queries := make([]filterQuery, len(histories))
-	for i, h := range histories {
-		queries[i] = filterQuery{
-			Query: h.Query,
-			ID:    h.ID.String(),
-		}
-	}
-
-	return c.JSON(http.StatusOK, map[string]interface{}{
-		"queries": queries,
-	})
+	return c.JSON(http.StatusOK, res)
 }
 
 func (h *TodoHandler) CreateTodo(c *echo.Context) error {

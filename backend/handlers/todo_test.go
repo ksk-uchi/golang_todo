@@ -347,12 +347,7 @@ func TestTodoHandler_ListTodoFilterHistories_Integration(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, rec.Code)
 
-		var res struct {
-			Queries []struct {
-				Query string `json:"query"`
-				ID    string `json:"id"`
-			} `json:"queries"`
-		}
+		var res dto.ListTodoFilterHistoriesResponseDto
 		err = json.Unmarshal(rec.Body.Bytes(), &res)
 		assert.NoError(t, err)
 
