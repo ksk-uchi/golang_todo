@@ -12,35 +12,21 @@ type ITodoFilterHistoryRepository interface {
 }
 
 type TodoFilterHistoryRepository struct {
-	client *ent.Client
+	base *BaseRepository
 }
 
 func NewTodoFilterHistoryRepository(client *ent.Client) *TodoFilterHistoryRepository {
-	return &TodoFilterHistoryRepository{client: client}
-}
-
-func (r *TodoFilterHistoryRepository) getClient(ctx context.Context) *ent.Client {
-	tx := ent.TxFromContext(ctx)
-	if tx != nil {
-		return tx.Client()
+	return &TodoFilterHistoryRepository{
+		base: NewBaseRepository(client),
 	}
-	return r.client
-}
-
-func (r *TodoFilterHistoryRepository) getUser(ctx context.Context) (*ent.User, error) {
-	u := ctx.Value("user")
-	if u == nil {
-		return nil, &ent.NotFoundError{}
-	}
-	return u.(*ent.User), nil
 }
 
 func (r *TodoFilterHistoryRepository) FetchLatestFilters(ctx context.Context, limit int) ([]*ent.TodoFilterHistory, error) {
-	u, err := r.getUser(ctx)
+	u, err := r.base.getUser(ctx)
 	if err != nil {
 		return nil, err
 	}
-	client := r.getClient(ctx)
+	client := r.base.getClient(ctx)
 	return client.TodoFilterHistory.Query().
 		Where(todofilterhistory.HasUserWith(user.ID(u.ID))).
 		Order(ent.Desc(todofilterhistory.FieldCreatedAt)).
