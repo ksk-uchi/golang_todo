@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"sync"
 	"todo-app/ent/todo"
+	"todo-app/ent/todofilterhistory"
 	"todo-app/ent/user"
 
 	"entgo.io/ent"
@@ -74,8 +75,9 @@ var (
 func checkColumn(t, c string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
-			todo.Table: todo.ValidColumn,
-			user.Table: user.ValidColumn,
+			todo.Table:              todo.ValidColumn,
+			todofilterhistory.Table: todofilterhistory.ValidColumn,
+			user.Table:              user.ValidColumn,
 		})
 	})
 	return columnCheck(t, c)

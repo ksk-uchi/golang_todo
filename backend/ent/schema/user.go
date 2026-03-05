@@ -29,5 +29,7 @@ func (User) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.To("todos", Todo.Type).
 			Annotations(entsql.OnDelete(entsql.Cascade)),
+		edge.To("todo_filter_histories", TodoFilterHistory.Type).
+			Annotations(entsql.OnDelete(entsql.Cascade)),
 	}
 }

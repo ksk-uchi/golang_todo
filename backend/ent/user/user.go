@@ -24,6 +24,8 @@ const (
 	FieldCreatedAt = "created_at"
 	// EdgeTodos holds the string denoting the todos edge name in mutations.
 	EdgeTodos = "todos"
+	// EdgeTodoFilterHistories holds the string denoting the todo_filter_histories edge name in mutations.
+	EdgeTodoFilterHistories = "todo_filter_histories"
 	// Table holds the table name of the user in the database.
 	Table = "users"
 	// TodosTable is the table that holds the todos relation/edge.
@@ -33,6 +35,13 @@ const (
 	TodosInverseTable = "todos"
 	// TodosColumn is the table column denoting the todos relation/edge.
 	TodosColumn = "user_id"
+	// TodoFilterHistoriesTable is the table that holds the todo_filter_histories relation/edge.
+	TodoFilterHistoriesTable = "todo_filter_histories"
+	// TodoFilterHistoriesInverseTable is the table name for the TodoFilterHistory entity.
+	// It exists in this package in order to avoid circular dependency with the "todofilterhistory" package.
+	TodoFilterHistoriesInverseTable = "todo_filter_histories"
+	// TodoFilterHistoriesColumn is the table column denoting the todo_filter_histories relation/edge.
+	TodoFilterHistoriesColumn = "user_id"
 )
 
 // Columns holds all SQL columns for user fields.
@@ -106,10 +115,31 @@ func ByTodos(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newTodosStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByTodoFilterHistoriesCount orders the results by todo_filter_histories count.
+func ByTodoFilterHistoriesCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newTodoFilterHistoriesStep(), opts...)
+	}
+}
+
+// ByTodoFilterHistories orders the results by todo_filter_histories terms.
+func ByTodoFilterHistories(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newTodoFilterHistoriesStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newTodosStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(TodosInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, TodosTable, TodosColumn),
+	)
+}
+func newTodoFilterHistoriesStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(TodoFilterHistoriesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, TodoFilterHistoriesTable, TodoFilterHistoriesColumn),
 	)
 }

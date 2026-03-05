@@ -12,12 +12,14 @@ import (
 	"todo-app/ent/migrate"
 
 	"todo-app/ent/todo"
+	"todo-app/ent/todofilterhistory"
 	"todo-app/ent/user"
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"github.com/google/uuid"
 )
 
 // Client is the client that holds all ent builders.
@@ -27,6 +29,8 @@ type Client struct {
 	Schema *migrate.Schema
 	// Todo is the client for interacting with the Todo builders.
 	Todo *TodoClient
+	// TodoFilterHistory is the client for interacting with the TodoFilterHistory builders.
+	TodoFilterHistory *TodoFilterHistoryClient
 	// User is the client for interacting with the User builders.
 	User *UserClient
 }
@@ -41,6 +45,7 @@ func NewClient(opts ...Option) *Client {
 func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
 	c.Todo = NewTodoClient(c.config)
+	c.TodoFilterHistory = NewTodoFilterHistoryClient(c.config)
 	c.User = NewUserClient(c.config)
 }
 
@@ -132,10 +137,11 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	cfg := c.config
 	cfg.driver = tx
 	return &Tx{
-		ctx:    ctx,
-		config: cfg,
-		Todo:   NewTodoClient(cfg),
-		User:   NewUserClient(cfg),
+		ctx:               ctx,
+		config:            cfg,
+		Todo:              NewTodoClient(cfg),
+		TodoFilterHistory: NewTodoFilterHistoryClient(cfg),
+		User:              NewUserClient(cfg),
 	}, nil
 }
 
@@ -153,10 +159,11 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	cfg := c.config
 	cfg.driver = &txDriver{tx: tx, drv: c.driver}
 	return &Tx{
-		ctx:    ctx,
-		config: cfg,
-		Todo:   NewTodoClient(cfg),
-		User:   NewUserClient(cfg),
+		ctx:               ctx,
+		config:            cfg,
+		Todo:              NewTodoClient(cfg),
+		TodoFilterHistory: NewTodoFilterHistoryClient(cfg),
+		User:              NewUserClient(cfg),
 	}, nil
 }
 
@@ -186,6 +193,7 @@ func (c *Client) Close() error {
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
 	c.Todo.Use(hooks...)
+	c.TodoFilterHistory.Use(hooks...)
 	c.User.Use(hooks...)
 }
 
@@ -193,6 +201,7 @@ func (c *Client) Use(hooks ...Hook) {
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	c.Todo.Intercept(interceptors...)
+	c.TodoFilterHistory.Intercept(interceptors...)
 	c.User.Intercept(interceptors...)
 }
 
@@ -201,6 +210,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 	switch m := m.(type) {
 	case *TodoMutation:
 		return c.Todo.mutate(ctx, m)
+	case *TodoFilterHistoryMutation:
+		return c.TodoFilterHistory.mutate(ctx, m)
 	case *UserMutation:
 		return c.User.mutate(ctx, m)
 	default:
@@ -357,6 +368,155 @@ func (c *TodoClient) mutate(ctx context.Context, m *TodoMutation) (Value, error)
 	}
 }
 
+// TodoFilterHistoryClient is a client for the TodoFilterHistory schema.
+type TodoFilterHistoryClient struct {
+	config
+}
+
+// NewTodoFilterHistoryClient returns a client for the TodoFilterHistory from the given config.
+func NewTodoFilterHistoryClient(c config) *TodoFilterHistoryClient {
+	return &TodoFilterHistoryClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `todofilterhistory.Hooks(f(g(h())))`.
+func (c *TodoFilterHistoryClient) Use(hooks ...Hook) {
+	c.hooks.TodoFilterHistory = append(c.hooks.TodoFilterHistory, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `todofilterhistory.Intercept(f(g(h())))`.
+func (c *TodoFilterHistoryClient) Intercept(interceptors ...Interceptor) {
+	c.inters.TodoFilterHistory = append(c.inters.TodoFilterHistory, interceptors...)
+}
+
+// Create returns a builder for creating a TodoFilterHistory entity.
+func (c *TodoFilterHistoryClient) Create() *TodoFilterHistoryCreate {
+	mutation := newTodoFilterHistoryMutation(c.config, OpCreate)
+	return &TodoFilterHistoryCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of TodoFilterHistory entities.
+func (c *TodoFilterHistoryClient) CreateBulk(builders ...*TodoFilterHistoryCreate) *TodoFilterHistoryCreateBulk {
+	return &TodoFilterHistoryCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *TodoFilterHistoryClient) MapCreateBulk(slice any, setFunc func(*TodoFilterHistoryCreate, int)) *TodoFilterHistoryCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &TodoFilterHistoryCreateBulk{err: fmt.Errorf("calling to TodoFilterHistoryClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*TodoFilterHistoryCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &TodoFilterHistoryCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for TodoFilterHistory.
+func (c *TodoFilterHistoryClient) Update() *TodoFilterHistoryUpdate {
+	mutation := newTodoFilterHistoryMutation(c.config, OpUpdate)
+	return &TodoFilterHistoryUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *TodoFilterHistoryClient) UpdateOne(_m *TodoFilterHistory) *TodoFilterHistoryUpdateOne {
+	mutation := newTodoFilterHistoryMutation(c.config, OpUpdateOne, withTodoFilterHistory(_m))
+	return &TodoFilterHistoryUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *TodoFilterHistoryClient) UpdateOneID(id uuid.UUID) *TodoFilterHistoryUpdateOne {
+	mutation := newTodoFilterHistoryMutation(c.config, OpUpdateOne, withTodoFilterHistoryID(id))
+	return &TodoFilterHistoryUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for TodoFilterHistory.
+func (c *TodoFilterHistoryClient) Delete() *TodoFilterHistoryDelete {
+	mutation := newTodoFilterHistoryMutation(c.config, OpDelete)
+	return &TodoFilterHistoryDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *TodoFilterHistoryClient) DeleteOne(_m *TodoFilterHistory) *TodoFilterHistoryDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *TodoFilterHistoryClient) DeleteOneID(id uuid.UUID) *TodoFilterHistoryDeleteOne {
+	builder := c.Delete().Where(todofilterhistory.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &TodoFilterHistoryDeleteOne{builder}
+}
+
+// Query returns a query builder for TodoFilterHistory.
+func (c *TodoFilterHistoryClient) Query() *TodoFilterHistoryQuery {
+	return &TodoFilterHistoryQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeTodoFilterHistory},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a TodoFilterHistory entity by its id.
+func (c *TodoFilterHistoryClient) Get(ctx context.Context, id uuid.UUID) (*TodoFilterHistory, error) {
+	return c.Query().Where(todofilterhistory.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *TodoFilterHistoryClient) GetX(ctx context.Context, id uuid.UUID) *TodoFilterHistory {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryUser queries the user edge of a TodoFilterHistory.
+func (c *TodoFilterHistoryClient) QueryUser(_m *TodoFilterHistory) *UserQuery {
+	query := (&UserClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(todofilterhistory.Table, todofilterhistory.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, todofilterhistory.UserTable, todofilterhistory.UserColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *TodoFilterHistoryClient) Hooks() []Hook {
+	return c.hooks.TodoFilterHistory
+}
+
+// Interceptors returns the client interceptors.
+func (c *TodoFilterHistoryClient) Interceptors() []Interceptor {
+	return c.inters.TodoFilterHistory
+}
+
+func (c *TodoFilterHistoryClient) mutate(ctx context.Context, m *TodoFilterHistoryMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&TodoFilterHistoryCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&TodoFilterHistoryUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&TodoFilterHistoryUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&TodoFilterHistoryDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown TodoFilterHistory mutation op: %q", m.Op())
+	}
+}
+
 // UserClient is a client for the User schema.
 type UserClient struct {
 	config
@@ -481,6 +641,22 @@ func (c *UserClient) QueryTodos(_m *User) *TodoQuery {
 	return query
 }
 
+// QueryTodoFilterHistories queries the todo_filter_histories edge of a User.
+func (c *UserClient) QueryTodoFilterHistories(_m *User) *TodoFilterHistoryQuery {
+	query := (&TodoFilterHistoryClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(todofilterhistory.Table, todofilterhistory.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.TodoFilterHistoriesTable, user.TodoFilterHistoriesColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *UserClient) Hooks() []Hook {
 	return c.hooks.User
@@ -509,9 +685,9 @@ func (c *UserClient) mutate(ctx context.Context, m *UserMutation) (Value, error)
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		Todo, User []ent.Hook
+		Todo, TodoFilterHistory, User []ent.Hook
 	}
 	inters struct {
-		Todo, User []ent.Interceptor
+		Todo, TodoFilterHistory, User []ent.Interceptor
 	}
 )

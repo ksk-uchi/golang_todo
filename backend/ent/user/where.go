@@ -333,6 +333,29 @@ func HasTodosWith(preds ...predicate.Todo) predicate.User {
 	})
 }
 
+// HasTodoFilterHistories applies the HasEdge predicate on the "todo_filter_histories" edge.
+func HasTodoFilterHistories() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, TodoFilterHistoriesTable, TodoFilterHistoriesColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasTodoFilterHistoriesWith applies the HasEdge predicate on the "todo_filter_histories" edge with a given conditions (other predicates).
+func HasTodoFilterHistoriesWith(preds ...predicate.TodoFilterHistory) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newTodoFilterHistoriesStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.User) predicate.User {
 	return predicate.User(sql.AndPredicates(predicates...))

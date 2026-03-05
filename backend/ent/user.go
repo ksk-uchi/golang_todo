@@ -35,9 +35,11 @@ type User struct {
 type UserEdges struct {
 	// Todos holds the value of the todos edge.
 	Todos []*Todo `json:"todos,omitempty"`
+	// TodoFilterHistories holds the value of the todo_filter_histories edge.
+	TodoFilterHistories []*TodoFilterHistory `json:"todo_filter_histories,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
+	loadedTypes [2]bool
 }
 
 // TodosOrErr returns the Todos value or an error if the edge
@@ -47,6 +49,15 @@ func (e UserEdges) TodosOrErr() ([]*Todo, error) {
 		return e.Todos, nil
 	}
 	return nil, &NotLoadedError{edge: "todos"}
+}
+
+// TodoFilterHistoriesOrErr returns the TodoFilterHistories value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) TodoFilterHistoriesOrErr() ([]*TodoFilterHistory, error) {
+	if e.loadedTypes[1] {
+		return e.TodoFilterHistories, nil
+	}
+	return nil, &NotLoadedError{edge: "todo_filter_histories"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -121,6 +132,11 @@ func (_m *User) Value(name string) (ent.Value, error) {
 // QueryTodos queries the "todos" edge of the User entity.
 func (_m *User) QueryTodos() *TodoQuery {
 	return NewUserClient(_m.config).QueryTodos(_m)
+}
+
+// QueryTodoFilterHistories queries the "todo_filter_histories" edge of the User entity.
+func (_m *User) QueryTodoFilterHistories() *TodoFilterHistoryQuery {
+	return NewUserClient(_m.config).QueryTodoFilterHistories(_m)
 }
 
 // Update returns a builder for updating this User.

@@ -6,7 +6,10 @@ import (
 	"time"
 	"todo-app/ent/schema"
 	"todo-app/ent/todo"
+	"todo-app/ent/todofilterhistory"
 	"todo-app/ent/user"
+
+	"github.com/google/uuid"
 )
 
 // The init function reads all schema descriptors with runtime code
@@ -67,6 +70,24 @@ func init() {
 	todoDescID := todoFields[0].Descriptor()
 	// todo.IDValidator is a validator for the "id" field. It is called by the builders before save.
 	todo.IDValidator = todoDescID.Validators[0].(func(int) error)
+	todofilterhistoryFields := schema.TodoFilterHistory{}.Fields()
+	_ = todofilterhistoryFields
+	// todofilterhistoryDescQuery is the schema descriptor for query field.
+	todofilterhistoryDescQuery := todofilterhistoryFields[2].Descriptor()
+	// todofilterhistory.QueryValidator is a validator for the "query" field. It is called by the builders before save.
+	todofilterhistory.QueryValidator = todofilterhistoryDescQuery.Validators[0].(func(string) error)
+	// todofilterhistoryDescFunctionName is the schema descriptor for function_name field.
+	todofilterhistoryDescFunctionName := todofilterhistoryFields[3].Descriptor()
+	// todofilterhistory.FunctionNameValidator is a validator for the "function_name" field. It is called by the builders before save.
+	todofilterhistory.FunctionNameValidator = todofilterhistoryDescFunctionName.Validators[0].(func(string) error)
+	// todofilterhistoryDescCreatedAt is the schema descriptor for created_at field.
+	todofilterhistoryDescCreatedAt := todofilterhistoryFields[6].Descriptor()
+	// todofilterhistory.DefaultCreatedAt holds the default value on creation for the created_at field.
+	todofilterhistory.DefaultCreatedAt = todofilterhistoryDescCreatedAt.Default.(func() time.Time)
+	// todofilterhistoryDescID is the schema descriptor for id field.
+	todofilterhistoryDescID := todofilterhistoryFields[0].Descriptor()
+	// todofilterhistory.DefaultID holds the default value on creation for the id field.
+	todofilterhistory.DefaultID = todofilterhistoryDescID.Default.(func() uuid.UUID)
 	userFields := schema.User{}.Fields()
 	_ = userFields
 	// userDescName is the schema descriptor for name field.

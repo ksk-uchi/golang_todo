@@ -14,6 +14,8 @@ type Tx struct {
 	config
 	// Todo is the client for interacting with the Todo builders.
 	Todo *TodoClient
+	// TodoFilterHistory is the client for interacting with the TodoFilterHistory builders.
+	TodoFilterHistory *TodoFilterHistoryClient
 	// User is the client for interacting with the User builders.
 	User *UserClient
 
@@ -148,6 +150,7 @@ func (tx *Tx) Client() *Client {
 
 func (tx *Tx) init() {
 	tx.Todo = NewTodoClient(tx.config)
+	tx.TodoFilterHistory = NewTodoFilterHistoryClient(tx.config)
 	tx.User = NewUserClient(tx.config)
 }
 
