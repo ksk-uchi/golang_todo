@@ -7,8 +7,10 @@ import (
 	"log/slog"
 	"testing"
 	"todo-app/services"
+	"todo-app/testutils"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func TestTodoService_CalculatePagination(t *testing.T) {
@@ -73,11 +75,9 @@ func TestTodoService_CalculatePagination(t *testing.T) {
 		for _, tt := range tests {
 			tt := tt
 			t.Run(tt.name, func(t *testing.T) {
-				repo := &spyTodoRepo{
-					count: func(includeDone bool) (int, error) {
-						return tt.count, nil
-					},
-				}
+				repo := new(testutils.MockTodoRepository)
+				repo.On("GetTodoCount", mock.Anything, false).Return(tt.count, nil)
+
 				ctx := context.Background()
 				service := services.NewTodoService(nil, slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
 
@@ -97,11 +97,9 @@ func TestTodoService_CalculatePagination(t *testing.T) {
 	})
 
 	t.Run("カウント取得でエラーが発生した場合、エラーを返すこと", func(t *testing.T) {
-		repo := &spyTodoRepo{
-			count: func(includeDone bool) (int, error) {
-				return 0, errors.New("db error")
-			},
-		}
+		repo := new(testutils.MockTodoRepository)
+		repo.On("GetTodoCount", mock.Anything, false).Return(0, errors.New("db error"))
+
 		ctx := context.Background()
 		service := services.NewTodoService(nil, slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
 

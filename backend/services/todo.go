@@ -6,21 +6,11 @@ import (
 	"todo-app/app_errors"
 	"todo-app/dto"
 	"todo-app/ent"
+	"todo-app/repositories"
 	"todo-app/utils"
 )
 
-type ITodoRepository interface {
-	FetchTodos(ctx context.Context, limit int, offset int, includeDone bool) ([]*ent.Todo, error)
-	GetTodoCount(ctx context.Context, includeDone bool) (int, error)
-	FindTodo(ctx context.Context, id int) (*ent.Todo, error)
-	GetTodoForUpdate(ctx context.Context, id int) (*ent.Todo, error)
-	CreateTodo(ctx context.Context, title string, description string) (*ent.Todo, error)
-	UpdateTodo(ctx context.Context, id int, title *string, description *string) (*ent.Todo, error)
-	UpdateDoneStatus(ctx context.Context, id int, isDone bool) (*ent.Todo, error)
-	DeleteTodo(ctx context.Context, id int) error
-}
-
-func NewTodoService(client *ent.Client, logger *slog.Logger, repo ITodoRepository) *TodoService {
+func NewTodoService(client *ent.Client, logger *slog.Logger, repo repositories.ITodoRepository) *TodoService {
 	return &TodoService{
 		client: client,
 		logger: logger,
@@ -31,7 +21,7 @@ func NewTodoService(client *ent.Client, logger *slog.Logger, repo ITodoRepositor
 type TodoService struct {
 	client *ent.Client
 	logger *slog.Logger
-	repo   ITodoRepository
+	repo   repositories.ITodoRepository
 }
 
 func (s *TodoService) GetTodoSlice(ctx context.Context, currentPage int, limit int, includeDone bool) ([]dto.TodoDto, error) {

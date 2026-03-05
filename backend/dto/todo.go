@@ -27,6 +27,11 @@ type PaginationDto struct {
 	Limit       int  `json:"limit"`
 }
 
+type AIFilterDto struct {
+	FunctionName string                 `json:"function_name"`
+	Args         map[string]interface{} `json:"args"`
+}
+
 func EntityToTodoDto(todo *ent.Todo) TodoDto {
 	return TodoDto{
 		ID:          todo.ID,

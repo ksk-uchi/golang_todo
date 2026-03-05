@@ -9,6 +9,18 @@ import (
 	"todo-app/ent/user"
 )
 
+type ITodoRepository interface {
+	FetchTodos(ctx context.Context, limit int, offset int, includeDone bool) ([]*ent.Todo, error)
+	GetTodoCount(ctx context.Context, includeDone bool) (int, error)
+	FindTodo(ctx context.Context, id int) (*ent.Todo, error)
+	GetTodoForUpdate(ctx context.Context, id int) (*ent.Todo, error)
+	CreateTodo(ctx context.Context, title string, description string) (*ent.Todo, error)
+	UpdateTodo(ctx context.Context, id int, title *string, description *string) (*ent.Todo, error)
+	UpdateDoneStatus(ctx context.Context, id int, isDone bool) (*ent.Todo, error)
+	DeleteTodo(ctx context.Context, id int) error
+	FetchTodosByDoneAt(ctx context.Context, doneFrom *time.Time, doneTo *time.Time) ([]*ent.Todo, error)
+}
+
 type TodoRepository struct {
 	client *ent.Client
 	logger *slog.Logger
@@ -147,6 +159,27 @@ func (r *TodoRepository) GetTodoForUpdate(ctx context.Context, id int) (*ent.Tod
 		return nil, err
 	}
 	return res, nil
+}
+
+func (r *TodoRepository) FetchTodosByDoneAt(ctx context.Context, doneFrom *time.Time, doneTo *time.Time) ([]*ent.Todo, error) {
+	u, err := r.getUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	client := r.getClient(ctx)
+	query := client.Todo.Query().
+		Where(todo.HasUserWith(user.ID(u.ID)))
+
+	if doneFrom != nil {
+		query.Where(todo.DoneAtGTE(*doneFrom))
+	}
+	if doneTo != nil {
+		query.Where(todo.DoneAtLTE(*doneTo))
+	}
+
+	return query.
+		Order(ent.Desc(todo.FieldDoneAt), ent.Desc(todo.FieldID)).
+		All(ctx)
 }
 
 func (r *TodoRepository) DeleteTodo(ctx context.Context, id int) error {
