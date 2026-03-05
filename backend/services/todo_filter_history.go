@@ -8,7 +8,7 @@ import (
 )
 
 type ITodoFilterHistoryService interface {
-	FetchLatestFilters(ctx context.Context, userID int) ([]*ent.TodoFilterHistory, error)
+	FetchLatestFilters(ctx context.Context) ([]*ent.TodoFilterHistory, error)
 }
 
 type TodoFilterHistoryService struct {
@@ -23,6 +23,6 @@ func NewTodoFilterHistoryService(repo repositories.ITodoFilterHistoryRepository,
 	}
 }
 
-func (s *TodoFilterHistoryService) FetchLatestFilters(ctx context.Context, userID int) ([]*ent.TodoFilterHistory, error) {
-	return s.repo.FetchLatestFilters(ctx, userID, 5)
+func (s *TodoFilterHistoryService) FetchLatestFilters(ctx context.Context) ([]*ent.TodoFilterHistory, error) {
+	return s.repo.FetchLatestFilters(ctx, 5)
 }

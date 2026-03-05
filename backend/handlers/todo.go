@@ -32,13 +32,7 @@ func (h *TodoHandler) ListTodoFilterHistories(c *echo.Context) error {
 	utils.LogRequest(h.logger, c)
 
 	ctx := c.Request().Context()
-	u := ctx.Value("user")
-	if u == nil {
-		return utils.HandleError(h.logger, c, errors.New("user not found in context"), http.StatusUnauthorized)
-	}
-	userEntity := u.(*ent.User)
-
-	histories, err := h.filterHistoryService.FetchLatestFilters(ctx, userEntity.ID)
+	histories, err := h.filterHistoryService.FetchLatestFilters(ctx)
 	if err != nil {
 		return utils.HandleError(h.logger, c, err, http.StatusInternalServerError)
 	}

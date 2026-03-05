@@ -23,12 +23,12 @@ func TestTodoFilterHistoryService_FetchLatestFilters(t *testing.T) {
 			{Query: "query 4"},
 			{Query: "query 5"},
 		}
-		repo.On("FetchLatestFilters", mock.Anything, 1, 5).Return(expectedHistories, nil)
+		repo.On("FetchLatestFilters", mock.Anything, 5).Return(expectedHistories, nil)
 
 		logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 		service := services.NewTodoFilterHistoryService(repo, logger)
 
-		result, err := service.FetchLatestFilters(context.Background(), 1)
+		result, err := service.FetchLatestFilters(context.Background())
 
 		assert.NoError(t, err)
 		assert.Equal(t, expectedHistories, result)
@@ -37,12 +37,12 @@ func TestTodoFilterHistoryService_FetchLatestFilters(t *testing.T) {
 
 	t.Run("リポジトリがエラーを返した場合、そのままエラーを返すこと", func(t *testing.T) {
 		repo := new(testutils.MockTodoFilterHistoryRepository)
-		repo.On("FetchLatestFilters", mock.Anything, 1, 5).Return([]*ent.TodoFilterHistory(nil), assert.AnError)
+		repo.On("FetchLatestFilters", mock.Anything, 5).Return([]*ent.TodoFilterHistory(nil), assert.AnError)
 
 		logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 		service := services.NewTodoFilterHistoryService(repo, logger)
 
-		result, err := service.FetchLatestFilters(context.Background(), 1)
+		result, err := service.FetchLatestFilters(context.Background())
 
 		assert.Error(t, err)
 		assert.Nil(t, result)

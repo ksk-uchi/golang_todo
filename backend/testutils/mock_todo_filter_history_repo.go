@@ -11,8 +11,8 @@ type MockTodoFilterHistoryRepository struct {
 	mock.Mock
 }
 
-func (m *MockTodoFilterHistoryRepository) FetchLatestFilters(ctx context.Context, userID int, limit int) ([]*ent.TodoFilterHistory, error) {
-	args := m.Called(ctx, userID, limit)
+func (m *MockTodoFilterHistoryRepository) FetchLatestFilters(ctx context.Context, limit int) ([]*ent.TodoFilterHistory, error) {
+	args := m.Called(ctx, limit)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
