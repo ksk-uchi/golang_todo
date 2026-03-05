@@ -8,10 +8,12 @@ import (
 	"fmt"
 	"time"
 	"todo-app/ent/todo"
+	"todo-app/ent/todofilterhistory"
 	"todo-app/ent/user"
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
 )
 
 // UserCreate is the builder for creating a User entity.
@@ -66,6 +68,21 @@ func (_c *UserCreate) AddTodos(v ...*Todo) *UserCreate {
 		ids[i] = v[i].ID
 	}
 	return _c.AddTodoIDs(ids...)
+}
+
+// AddTodoFilterHistoryIDs adds the "todo_filter_histories" edge to the TodoFilterHistory entity by IDs.
+func (_c *UserCreate) AddTodoFilterHistoryIDs(ids ...uuid.UUID) *UserCreate {
+	_c.mutation.AddTodoFilterHistoryIDs(ids...)
+	return _c
+}
+
+// AddTodoFilterHistories adds the "todo_filter_histories" edges to the TodoFilterHistory entity.
+func (_c *UserCreate) AddTodoFilterHistories(v ...*TodoFilterHistory) *UserCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddTodoFilterHistoryIDs(ids...)
 }
 
 // Mutation returns the UserMutation object of the builder.
@@ -189,6 +206,22 @@ func (_c *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(todo.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.TodoFilterHistoriesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.TodoFilterHistoriesTable,
+			Columns: []string{user.TodoFilterHistoriesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(todofilterhistory.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

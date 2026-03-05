@@ -3,6 +3,7 @@
 package migrate
 
 import (
+	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/dialect/sql/schema"
 	"entgo.io/ent/schema/field"
 )
@@ -32,6 +33,30 @@ var (
 			},
 		},
 	}
+	// TodoFilterHistoriesColumns holds the columns for the "todo_filter_histories" table.
+	TodoFilterHistoriesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "query", Type: field.TypeString, Size: 400},
+		{Name: "function_name", Type: field.TypeString, Nullable: true, Size: 100},
+		{Name: "args", Type: field.TypeJSON, Nullable: true},
+		{Name: "result_todo_ids", Type: field.TypeJSON, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "user_id", Type: field.TypeInt},
+	}
+	// TodoFilterHistoriesTable holds the schema information for the "todo_filter_histories" table.
+	TodoFilterHistoriesTable = &schema.Table{
+		Name:       "todo_filter_histories",
+		Columns:    TodoFilterHistoriesColumns,
+		PrimaryKey: []*schema.Column{TodoFilterHistoriesColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "todo_filter_histories_users_todo_filter_histories",
+				Columns:    []*schema.Column{TodoFilterHistoriesColumns[6]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+	}
 	// UsersColumns holds the columns for the "users" table.
 	UsersColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -49,10 +74,15 @@ var (
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
 		TodosTable,
+		TodoFilterHistoriesTable,
 		UsersTable,
 	}
 )
 
 func init() {
 	TodosTable.ForeignKeys[0].RefTable = UsersTable
+	TodoFilterHistoriesTable.ForeignKeys[0].RefTable = UsersTable
+	TodoFilterHistoriesTable.Annotation = &entsql.Annotation{
+		Table: "todo_filter_histories",
+	}
 }

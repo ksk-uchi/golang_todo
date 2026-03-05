@@ -9,5 +9,8 @@ import (
 // Todo is the predicate function for todo builders.
 type Todo func(*sql.Selector)
 
+// TodoFilterHistory is the predicate function for todofilterhistory builders.
+type TodoFilterHistory func(*sql.Selector)
+
 // User is the predicate function for user builders.
 type User func(*sql.Selector)

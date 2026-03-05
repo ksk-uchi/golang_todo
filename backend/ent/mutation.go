@@ -10,10 +10,12 @@ import (
 	"time"
 	"todo-app/ent/predicate"
 	"todo-app/ent/todo"
+	"todo-app/ent/todofilterhistory"
 	"todo-app/ent/user"
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
+	"github.com/google/uuid"
 )
 
 const (
@@ -25,8 +27,9 @@ const (
 	OpUpdateOne = ent.OpUpdateOne
 
 	// Node types.
-	TypeTodo = "Todo"
-	TypeUser = "User"
+	TypeTodo              = "Todo"
+	TypeTodoFilterHistory = "TodoFilterHistory"
+	TypeUser              = "User"
 )
 
 // TodoMutation represents an operation that mutates the Todo nodes in the graph.
@@ -710,23 +713,762 @@ func (m *TodoMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown Todo edge %s", name)
 }
 
+// TodoFilterHistoryMutation represents an operation that mutates the TodoFilterHistory nodes in the graph.
+type TodoFilterHistoryMutation struct {
+	config
+	op                    Op
+	typ                   string
+	id                    *uuid.UUID
+	query                 *string
+	function_name         *string
+	args                  *map[string]interface{}
+	result_todo_ids       *[]int
+	appendresult_todo_ids []int
+	created_at            *time.Time
+	clearedFields         map[string]struct{}
+	user                  *int
+	cleareduser           bool
+	done                  bool
+	oldValue              func(context.Context) (*TodoFilterHistory, error)
+	predicates            []predicate.TodoFilterHistory
+}
+
+var _ ent.Mutation = (*TodoFilterHistoryMutation)(nil)
+
+// todofilterhistoryOption allows management of the mutation configuration using functional options.
+type todofilterhistoryOption func(*TodoFilterHistoryMutation)
+
+// newTodoFilterHistoryMutation creates new mutation for the TodoFilterHistory entity.
+func newTodoFilterHistoryMutation(c config, op Op, opts ...todofilterhistoryOption) *TodoFilterHistoryMutation {
+	m := &TodoFilterHistoryMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeTodoFilterHistory,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withTodoFilterHistoryID sets the ID field of the mutation.
+func withTodoFilterHistoryID(id uuid.UUID) todofilterhistoryOption {
+	return func(m *TodoFilterHistoryMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *TodoFilterHistory
+		)
+		m.oldValue = func(ctx context.Context) (*TodoFilterHistory, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().TodoFilterHistory.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withTodoFilterHistory sets the old TodoFilterHistory of the mutation.
+func withTodoFilterHistory(node *TodoFilterHistory) todofilterhistoryOption {
+	return func(m *TodoFilterHistoryMutation) {
+		m.oldValue = func(context.Context) (*TodoFilterHistory, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m TodoFilterHistoryMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m TodoFilterHistoryMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of TodoFilterHistory entities.
+func (m *TodoFilterHistoryMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *TodoFilterHistoryMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *TodoFilterHistoryMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().TodoFilterHistory.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetUserID sets the "user_id" field.
+func (m *TodoFilterHistoryMutation) SetUserID(i int) {
+	m.user = &i
+}
+
+// UserID returns the value of the "user_id" field in the mutation.
+func (m *TodoFilterHistoryMutation) UserID() (r int, exists bool) {
+	v := m.user
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUserID returns the old "user_id" field's value of the TodoFilterHistory entity.
+// If the TodoFilterHistory object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TodoFilterHistoryMutation) OldUserID(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUserID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUserID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUserID: %w", err)
+	}
+	return oldValue.UserID, nil
+}
+
+// ResetUserID resets all changes to the "user_id" field.
+func (m *TodoFilterHistoryMutation) ResetUserID() {
+	m.user = nil
+}
+
+// SetQuery sets the "query" field.
+func (m *TodoFilterHistoryMutation) SetQuery(s string) {
+	m.query = &s
+}
+
+// Query returns the value of the "query" field in the mutation.
+func (m *TodoFilterHistoryMutation) Query() (r string, exists bool) {
+	v := m.query
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldQuery returns the old "query" field's value of the TodoFilterHistory entity.
+// If the TodoFilterHistory object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TodoFilterHistoryMutation) OldQuery(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldQuery is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldQuery requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldQuery: %w", err)
+	}
+	return oldValue.Query, nil
+}
+
+// ResetQuery resets all changes to the "query" field.
+func (m *TodoFilterHistoryMutation) ResetQuery() {
+	m.query = nil
+}
+
+// SetFunctionName sets the "function_name" field.
+func (m *TodoFilterHistoryMutation) SetFunctionName(s string) {
+	m.function_name = &s
+}
+
+// FunctionName returns the value of the "function_name" field in the mutation.
+func (m *TodoFilterHistoryMutation) FunctionName() (r string, exists bool) {
+	v := m.function_name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldFunctionName returns the old "function_name" field's value of the TodoFilterHistory entity.
+// If the TodoFilterHistory object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TodoFilterHistoryMutation) OldFunctionName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldFunctionName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldFunctionName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldFunctionName: %w", err)
+	}
+	return oldValue.FunctionName, nil
+}
+
+// ClearFunctionName clears the value of the "function_name" field.
+func (m *TodoFilterHistoryMutation) ClearFunctionName() {
+	m.function_name = nil
+	m.clearedFields[todofilterhistory.FieldFunctionName] = struct{}{}
+}
+
+// FunctionNameCleared returns if the "function_name" field was cleared in this mutation.
+func (m *TodoFilterHistoryMutation) FunctionNameCleared() bool {
+	_, ok := m.clearedFields[todofilterhistory.FieldFunctionName]
+	return ok
+}
+
+// ResetFunctionName resets all changes to the "function_name" field.
+func (m *TodoFilterHistoryMutation) ResetFunctionName() {
+	m.function_name = nil
+	delete(m.clearedFields, todofilterhistory.FieldFunctionName)
+}
+
+// SetArgs sets the "args" field.
+func (m *TodoFilterHistoryMutation) SetArgs(value map[string]interface{}) {
+	m.args = &value
+}
+
+// Args returns the value of the "args" field in the mutation.
+func (m *TodoFilterHistoryMutation) Args() (r map[string]interface{}, exists bool) {
+	v := m.args
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldArgs returns the old "args" field's value of the TodoFilterHistory entity.
+// If the TodoFilterHistory object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TodoFilterHistoryMutation) OldArgs(ctx context.Context) (v map[string]interface{}, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldArgs is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldArgs requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldArgs: %w", err)
+	}
+	return oldValue.Args, nil
+}
+
+// ClearArgs clears the value of the "args" field.
+func (m *TodoFilterHistoryMutation) ClearArgs() {
+	m.args = nil
+	m.clearedFields[todofilterhistory.FieldArgs] = struct{}{}
+}
+
+// ArgsCleared returns if the "args" field was cleared in this mutation.
+func (m *TodoFilterHistoryMutation) ArgsCleared() bool {
+	_, ok := m.clearedFields[todofilterhistory.FieldArgs]
+	return ok
+}
+
+// ResetArgs resets all changes to the "args" field.
+func (m *TodoFilterHistoryMutation) ResetArgs() {
+	m.args = nil
+	delete(m.clearedFields, todofilterhistory.FieldArgs)
+}
+
+// SetResultTodoIds sets the "result_todo_ids" field.
+func (m *TodoFilterHistoryMutation) SetResultTodoIds(i []int) {
+	m.result_todo_ids = &i
+	m.appendresult_todo_ids = nil
+}
+
+// ResultTodoIds returns the value of the "result_todo_ids" field in the mutation.
+func (m *TodoFilterHistoryMutation) ResultTodoIds() (r []int, exists bool) {
+	v := m.result_todo_ids
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldResultTodoIds returns the old "result_todo_ids" field's value of the TodoFilterHistory entity.
+// If the TodoFilterHistory object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TodoFilterHistoryMutation) OldResultTodoIds(ctx context.Context) (v []int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldResultTodoIds is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldResultTodoIds requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldResultTodoIds: %w", err)
+	}
+	return oldValue.ResultTodoIds, nil
+}
+
+// AppendResultTodoIds adds i to the "result_todo_ids" field.
+func (m *TodoFilterHistoryMutation) AppendResultTodoIds(i []int) {
+	m.appendresult_todo_ids = append(m.appendresult_todo_ids, i...)
+}
+
+// AppendedResultTodoIds returns the list of values that were appended to the "result_todo_ids" field in this mutation.
+func (m *TodoFilterHistoryMutation) AppendedResultTodoIds() ([]int, bool) {
+	if len(m.appendresult_todo_ids) == 0 {
+		return nil, false
+	}
+	return m.appendresult_todo_ids, true
+}
+
+// ClearResultTodoIds clears the value of the "result_todo_ids" field.
+func (m *TodoFilterHistoryMutation) ClearResultTodoIds() {
+	m.result_todo_ids = nil
+	m.appendresult_todo_ids = nil
+	m.clearedFields[todofilterhistory.FieldResultTodoIds] = struct{}{}
+}
+
+// ResultTodoIdsCleared returns if the "result_todo_ids" field was cleared in this mutation.
+func (m *TodoFilterHistoryMutation) ResultTodoIdsCleared() bool {
+	_, ok := m.clearedFields[todofilterhistory.FieldResultTodoIds]
+	return ok
+}
+
+// ResetResultTodoIds resets all changes to the "result_todo_ids" field.
+func (m *TodoFilterHistoryMutation) ResetResultTodoIds() {
+	m.result_todo_ids = nil
+	m.appendresult_todo_ids = nil
+	delete(m.clearedFields, todofilterhistory.FieldResultTodoIds)
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *TodoFilterHistoryMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *TodoFilterHistoryMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the TodoFilterHistory entity.
+// If the TodoFilterHistory object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TodoFilterHistoryMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *TodoFilterHistoryMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// ClearUser clears the "user" edge to the User entity.
+func (m *TodoFilterHistoryMutation) ClearUser() {
+	m.cleareduser = true
+	m.clearedFields[todofilterhistory.FieldUserID] = struct{}{}
+}
+
+// UserCleared reports if the "user" edge to the User entity was cleared.
+func (m *TodoFilterHistoryMutation) UserCleared() bool {
+	return m.cleareduser
+}
+
+// UserIDs returns the "user" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// UserID instead. It exists only for internal usage by the builders.
+func (m *TodoFilterHistoryMutation) UserIDs() (ids []int) {
+	if id := m.user; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetUser resets all changes to the "user" edge.
+func (m *TodoFilterHistoryMutation) ResetUser() {
+	m.user = nil
+	m.cleareduser = false
+}
+
+// Where appends a list predicates to the TodoFilterHistoryMutation builder.
+func (m *TodoFilterHistoryMutation) Where(ps ...predicate.TodoFilterHistory) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the TodoFilterHistoryMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *TodoFilterHistoryMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.TodoFilterHistory, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *TodoFilterHistoryMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *TodoFilterHistoryMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (TodoFilterHistory).
+func (m *TodoFilterHistoryMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *TodoFilterHistoryMutation) Fields() []string {
+	fields := make([]string, 0, 6)
+	if m.user != nil {
+		fields = append(fields, todofilterhistory.FieldUserID)
+	}
+	if m.query != nil {
+		fields = append(fields, todofilterhistory.FieldQuery)
+	}
+	if m.function_name != nil {
+		fields = append(fields, todofilterhistory.FieldFunctionName)
+	}
+	if m.args != nil {
+		fields = append(fields, todofilterhistory.FieldArgs)
+	}
+	if m.result_todo_ids != nil {
+		fields = append(fields, todofilterhistory.FieldResultTodoIds)
+	}
+	if m.created_at != nil {
+		fields = append(fields, todofilterhistory.FieldCreatedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *TodoFilterHistoryMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case todofilterhistory.FieldUserID:
+		return m.UserID()
+	case todofilterhistory.FieldQuery:
+		return m.Query()
+	case todofilterhistory.FieldFunctionName:
+		return m.FunctionName()
+	case todofilterhistory.FieldArgs:
+		return m.Args()
+	case todofilterhistory.FieldResultTodoIds:
+		return m.ResultTodoIds()
+	case todofilterhistory.FieldCreatedAt:
+		return m.CreatedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *TodoFilterHistoryMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case todofilterhistory.FieldUserID:
+		return m.OldUserID(ctx)
+	case todofilterhistory.FieldQuery:
+		return m.OldQuery(ctx)
+	case todofilterhistory.FieldFunctionName:
+		return m.OldFunctionName(ctx)
+	case todofilterhistory.FieldArgs:
+		return m.OldArgs(ctx)
+	case todofilterhistory.FieldResultTodoIds:
+		return m.OldResultTodoIds(ctx)
+	case todofilterhistory.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown TodoFilterHistory field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *TodoFilterHistoryMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case todofilterhistory.FieldUserID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUserID(v)
+		return nil
+	case todofilterhistory.FieldQuery:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetQuery(v)
+		return nil
+	case todofilterhistory.FieldFunctionName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetFunctionName(v)
+		return nil
+	case todofilterhistory.FieldArgs:
+		v, ok := value.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetArgs(v)
+		return nil
+	case todofilterhistory.FieldResultTodoIds:
+		v, ok := value.([]int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetResultTodoIds(v)
+		return nil
+	case todofilterhistory.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown TodoFilterHistory field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *TodoFilterHistoryMutation) AddedFields() []string {
+	var fields []string
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *TodoFilterHistoryMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *TodoFilterHistoryMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown TodoFilterHistory numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *TodoFilterHistoryMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(todofilterhistory.FieldFunctionName) {
+		fields = append(fields, todofilterhistory.FieldFunctionName)
+	}
+	if m.FieldCleared(todofilterhistory.FieldArgs) {
+		fields = append(fields, todofilterhistory.FieldArgs)
+	}
+	if m.FieldCleared(todofilterhistory.FieldResultTodoIds) {
+		fields = append(fields, todofilterhistory.FieldResultTodoIds)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *TodoFilterHistoryMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *TodoFilterHistoryMutation) ClearField(name string) error {
+	switch name {
+	case todofilterhistory.FieldFunctionName:
+		m.ClearFunctionName()
+		return nil
+	case todofilterhistory.FieldArgs:
+		m.ClearArgs()
+		return nil
+	case todofilterhistory.FieldResultTodoIds:
+		m.ClearResultTodoIds()
+		return nil
+	}
+	return fmt.Errorf("unknown TodoFilterHistory nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *TodoFilterHistoryMutation) ResetField(name string) error {
+	switch name {
+	case todofilterhistory.FieldUserID:
+		m.ResetUserID()
+		return nil
+	case todofilterhistory.FieldQuery:
+		m.ResetQuery()
+		return nil
+	case todofilterhistory.FieldFunctionName:
+		m.ResetFunctionName()
+		return nil
+	case todofilterhistory.FieldArgs:
+		m.ResetArgs()
+		return nil
+	case todofilterhistory.FieldResultTodoIds:
+		m.ResetResultTodoIds()
+		return nil
+	case todofilterhistory.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown TodoFilterHistory field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *TodoFilterHistoryMutation) AddedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.user != nil {
+		edges = append(edges, todofilterhistory.EdgeUser)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *TodoFilterHistoryMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case todofilterhistory.EdgeUser:
+		if id := m.user; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *TodoFilterHistoryMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 1)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *TodoFilterHistoryMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *TodoFilterHistoryMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.cleareduser {
+		edges = append(edges, todofilterhistory.EdgeUser)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *TodoFilterHistoryMutation) EdgeCleared(name string) bool {
+	switch name {
+	case todofilterhistory.EdgeUser:
+		return m.cleareduser
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *TodoFilterHistoryMutation) ClearEdge(name string) error {
+	switch name {
+	case todofilterhistory.EdgeUser:
+		m.ClearUser()
+		return nil
+	}
+	return fmt.Errorf("unknown TodoFilterHistory unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *TodoFilterHistoryMutation) ResetEdge(name string) error {
+	switch name {
+	case todofilterhistory.EdgeUser:
+		m.ResetUser()
+		return nil
+	}
+	return fmt.Errorf("unknown TodoFilterHistory edge %s", name)
+}
+
 // UserMutation represents an operation that mutates the User nodes in the graph.
 type UserMutation struct {
 	config
-	op            Op
-	typ           string
-	id            *int
-	name          *string
-	email         *string
-	password      *string
-	created_at    *time.Time
-	clearedFields map[string]struct{}
-	todos         map[int]struct{}
-	removedtodos  map[int]struct{}
-	clearedtodos  bool
-	done          bool
-	oldValue      func(context.Context) (*User, error)
-	predicates    []predicate.User
+	op                           Op
+	typ                          string
+	id                           *int
+	name                         *string
+	email                        *string
+	password                     *string
+	created_at                   *time.Time
+	clearedFields                map[string]struct{}
+	todos                        map[int]struct{}
+	removedtodos                 map[int]struct{}
+	clearedtodos                 bool
+	todo_filter_histories        map[uuid.UUID]struct{}
+	removedtodo_filter_histories map[uuid.UUID]struct{}
+	clearedtodo_filter_histories bool
+	done                         bool
+	oldValue                     func(context.Context) (*User, error)
+	predicates                   []predicate.User
 }
 
 var _ ent.Mutation = (*UserMutation)(nil)
@@ -1025,6 +1767,60 @@ func (m *UserMutation) ResetTodos() {
 	m.removedtodos = nil
 }
 
+// AddTodoFilterHistoryIDs adds the "todo_filter_histories" edge to the TodoFilterHistory entity by ids.
+func (m *UserMutation) AddTodoFilterHistoryIDs(ids ...uuid.UUID) {
+	if m.todo_filter_histories == nil {
+		m.todo_filter_histories = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.todo_filter_histories[ids[i]] = struct{}{}
+	}
+}
+
+// ClearTodoFilterHistories clears the "todo_filter_histories" edge to the TodoFilterHistory entity.
+func (m *UserMutation) ClearTodoFilterHistories() {
+	m.clearedtodo_filter_histories = true
+}
+
+// TodoFilterHistoriesCleared reports if the "todo_filter_histories" edge to the TodoFilterHistory entity was cleared.
+func (m *UserMutation) TodoFilterHistoriesCleared() bool {
+	return m.clearedtodo_filter_histories
+}
+
+// RemoveTodoFilterHistoryIDs removes the "todo_filter_histories" edge to the TodoFilterHistory entity by IDs.
+func (m *UserMutation) RemoveTodoFilterHistoryIDs(ids ...uuid.UUID) {
+	if m.removedtodo_filter_histories == nil {
+		m.removedtodo_filter_histories = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.todo_filter_histories, ids[i])
+		m.removedtodo_filter_histories[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedTodoFilterHistories returns the removed IDs of the "todo_filter_histories" edge to the TodoFilterHistory entity.
+func (m *UserMutation) RemovedTodoFilterHistoriesIDs() (ids []uuid.UUID) {
+	for id := range m.removedtodo_filter_histories {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// TodoFilterHistoriesIDs returns the "todo_filter_histories" edge IDs in the mutation.
+func (m *UserMutation) TodoFilterHistoriesIDs() (ids []uuid.UUID) {
+	for id := range m.todo_filter_histories {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetTodoFilterHistories resets all changes to the "todo_filter_histories" edge.
+func (m *UserMutation) ResetTodoFilterHistories() {
+	m.todo_filter_histories = nil
+	m.clearedtodo_filter_histories = false
+	m.removedtodo_filter_histories = nil
+}
+
 // Where appends a list predicates to the UserMutation builder.
 func (m *UserMutation) Where(ps ...predicate.User) {
 	m.predicates = append(m.predicates, ps...)
@@ -1209,9 +2005,12 @@ func (m *UserMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *UserMutation) AddedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	if m.todos != nil {
 		edges = append(edges, user.EdgeTodos)
+	}
+	if m.todo_filter_histories != nil {
+		edges = append(edges, user.EdgeTodoFilterHistories)
 	}
 	return edges
 }
@@ -1226,15 +2025,24 @@ func (m *UserMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case user.EdgeTodoFilterHistories:
+		ids := make([]ent.Value, 0, len(m.todo_filter_histories))
+		for id := range m.todo_filter_histories {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *UserMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	if m.removedtodos != nil {
 		edges = append(edges, user.EdgeTodos)
+	}
+	if m.removedtodo_filter_histories != nil {
+		edges = append(edges, user.EdgeTodoFilterHistories)
 	}
 	return edges
 }
@@ -1249,15 +2057,24 @@ func (m *UserMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case user.EdgeTodoFilterHistories:
+		ids := make([]ent.Value, 0, len(m.removedtodo_filter_histories))
+		for id := range m.removedtodo_filter_histories {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *UserMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	if m.clearedtodos {
 		edges = append(edges, user.EdgeTodos)
+	}
+	if m.clearedtodo_filter_histories {
+		edges = append(edges, user.EdgeTodoFilterHistories)
 	}
 	return edges
 }
@@ -1268,6 +2085,8 @@ func (m *UserMutation) EdgeCleared(name string) bool {
 	switch name {
 	case user.EdgeTodos:
 		return m.clearedtodos
+	case user.EdgeTodoFilterHistories:
+		return m.clearedtodo_filter_histories
 	}
 	return false
 }
@@ -1286,6 +2105,9 @@ func (m *UserMutation) ResetEdge(name string) error {
 	switch name {
 	case user.EdgeTodos:
 		m.ResetTodos()
+		return nil
+	case user.EdgeTodoFilterHistories:
+		m.ResetTodoFilterHistories()
 		return nil
 	}
 	return fmt.Errorf("unknown User edge %s", name)

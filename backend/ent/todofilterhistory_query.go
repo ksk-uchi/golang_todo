@@ -4,11 +4,9 @@ package ent
 
 import (
 	"context"
-	"database/sql/driver"
 	"fmt"
 	"math"
 	"todo-app/ent/predicate"
-	"todo-app/ent/todo"
 	"todo-app/ent/todofilterhistory"
 	"todo-app/ent/user"
 
@@ -17,57 +15,57 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
 )
 
-// UserQuery is the builder for querying User entities.
-type UserQuery struct {
+// TodoFilterHistoryQuery is the builder for querying TodoFilterHistory entities.
+type TodoFilterHistoryQuery struct {
 	config
-	ctx                     *QueryContext
-	order                   []user.OrderOption
-	inters                  []Interceptor
-	predicates              []predicate.User
-	withTodos               *TodoQuery
-	withTodoFilterHistories *TodoFilterHistoryQuery
-	modifiers               []func(*sql.Selector)
+	ctx        *QueryContext
+	order      []todofilterhistory.OrderOption
+	inters     []Interceptor
+	predicates []predicate.TodoFilterHistory
+	withUser   *UserQuery
+	modifiers  []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
 }
 
-// Where adds a new predicate for the UserQuery builder.
-func (_q *UserQuery) Where(ps ...predicate.User) *UserQuery {
+// Where adds a new predicate for the TodoFilterHistoryQuery builder.
+func (_q *TodoFilterHistoryQuery) Where(ps ...predicate.TodoFilterHistory) *TodoFilterHistoryQuery {
 	_q.predicates = append(_q.predicates, ps...)
 	return _q
 }
 
 // Limit the number of records to be returned by this query.
-func (_q *UserQuery) Limit(limit int) *UserQuery {
+func (_q *TodoFilterHistoryQuery) Limit(limit int) *TodoFilterHistoryQuery {
 	_q.ctx.Limit = &limit
 	return _q
 }
 
 // Offset to start from.
-func (_q *UserQuery) Offset(offset int) *UserQuery {
+func (_q *TodoFilterHistoryQuery) Offset(offset int) *TodoFilterHistoryQuery {
 	_q.ctx.Offset = &offset
 	return _q
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
-func (_q *UserQuery) Unique(unique bool) *UserQuery {
+func (_q *TodoFilterHistoryQuery) Unique(unique bool) *TodoFilterHistoryQuery {
 	_q.ctx.Unique = &unique
 	return _q
 }
 
 // Order specifies how the records should be ordered.
-func (_q *UserQuery) Order(o ...user.OrderOption) *UserQuery {
+func (_q *TodoFilterHistoryQuery) Order(o ...todofilterhistory.OrderOption) *TodoFilterHistoryQuery {
 	_q.order = append(_q.order, o...)
 	return _q
 }
 
-// QueryTodos chains the current query on the "todos" edge.
-func (_q *UserQuery) QueryTodos() *TodoQuery {
-	query := (&TodoClient{config: _q.config}).Query()
+// QueryUser chains the current query on the "user" edge.
+func (_q *TodoFilterHistoryQuery) QueryUser() *UserQuery {
+	query := (&UserClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -77,9 +75,9 @@ func (_q *UserQuery) QueryTodos() *TodoQuery {
 			return nil, err
 		}
 		step := sqlgraph.NewStep(
-			sqlgraph.From(user.Table, user.FieldID, selector),
-			sqlgraph.To(todo.Table, todo.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, user.TodosTable, user.TodosColumn),
+			sqlgraph.From(todofilterhistory.Table, todofilterhistory.FieldID, selector),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, todofilterhistory.UserTable, todofilterhistory.UserColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -87,43 +85,21 @@ func (_q *UserQuery) QueryTodos() *TodoQuery {
 	return query
 }
 
-// QueryTodoFilterHistories chains the current query on the "todo_filter_histories" edge.
-func (_q *UserQuery) QueryTodoFilterHistories() *TodoFilterHistoryQuery {
-	query := (&TodoFilterHistoryClient{config: _q.config}).Query()
-	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := _q.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		selector := _q.sqlQuery(ctx)
-		if err := selector.Err(); err != nil {
-			return nil, err
-		}
-		step := sqlgraph.NewStep(
-			sqlgraph.From(user.Table, user.FieldID, selector),
-			sqlgraph.To(todofilterhistory.Table, todofilterhistory.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, user.TodoFilterHistoriesTable, user.TodoFilterHistoriesColumn),
-		)
-		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
-		return fromU, nil
-	}
-	return query
-}
-
-// First returns the first User entity from the query.
-// Returns a *NotFoundError when no User was found.
-func (_q *UserQuery) First(ctx context.Context) (*User, error) {
+// First returns the first TodoFilterHistory entity from the query.
+// Returns a *NotFoundError when no TodoFilterHistory was found.
+func (_q *TodoFilterHistoryQuery) First(ctx context.Context) (*TodoFilterHistory, error) {
 	nodes, err := _q.Limit(1).All(setContextOp(ctx, _q.ctx, ent.OpQueryFirst))
 	if err != nil {
 		return nil, err
 	}
 	if len(nodes) == 0 {
-		return nil, &NotFoundError{user.Label}
+		return nil, &NotFoundError{todofilterhistory.Label}
 	}
 	return nodes[0], nil
 }
 
 // FirstX is like First, but panics if an error occurs.
-func (_q *UserQuery) FirstX(ctx context.Context) *User {
+func (_q *TodoFilterHistoryQuery) FirstX(ctx context.Context) *TodoFilterHistory {
 	node, err := _q.First(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
@@ -131,22 +107,22 @@ func (_q *UserQuery) FirstX(ctx context.Context) *User {
 	return node
 }
 
-// FirstID returns the first User ID from the query.
-// Returns a *NotFoundError when no User ID was found.
-func (_q *UserQuery) FirstID(ctx context.Context) (id int, err error) {
-	var ids []int
+// FirstID returns the first TodoFilterHistory ID from the query.
+// Returns a *NotFoundError when no TodoFilterHistory ID was found.
+func (_q *TodoFilterHistoryQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
+	var ids []uuid.UUID
 	if ids, err = _q.Limit(1).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryFirstID)); err != nil {
 		return
 	}
 	if len(ids) == 0 {
-		err = &NotFoundError{user.Label}
+		err = &NotFoundError{todofilterhistory.Label}
 		return
 	}
 	return ids[0], nil
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (_q *UserQuery) FirstIDX(ctx context.Context) int {
+func (_q *TodoFilterHistoryQuery) FirstIDX(ctx context.Context) uuid.UUID {
 	id, err := _q.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
@@ -154,10 +130,10 @@ func (_q *UserQuery) FirstIDX(ctx context.Context) int {
 	return id
 }
 
-// Only returns a single User entity found by the query, ensuring it only returns one.
-// Returns a *NotSingularError when more than one User entity is found.
-// Returns a *NotFoundError when no User entities are found.
-func (_q *UserQuery) Only(ctx context.Context) (*User, error) {
+// Only returns a single TodoFilterHistory entity found by the query, ensuring it only returns one.
+// Returns a *NotSingularError when more than one TodoFilterHistory entity is found.
+// Returns a *NotFoundError when no TodoFilterHistory entities are found.
+func (_q *TodoFilterHistoryQuery) Only(ctx context.Context) (*TodoFilterHistory, error) {
 	nodes, err := _q.Limit(2).All(setContextOp(ctx, _q.ctx, ent.OpQueryOnly))
 	if err != nil {
 		return nil, err
@@ -166,14 +142,14 @@ func (_q *UserQuery) Only(ctx context.Context) (*User, error) {
 	case 1:
 		return nodes[0], nil
 	case 0:
-		return nil, &NotFoundError{user.Label}
+		return nil, &NotFoundError{todofilterhistory.Label}
 	default:
-		return nil, &NotSingularError{user.Label}
+		return nil, &NotSingularError{todofilterhistory.Label}
 	}
 }
 
 // OnlyX is like Only, but panics if an error occurs.
-func (_q *UserQuery) OnlyX(ctx context.Context) *User {
+func (_q *TodoFilterHistoryQuery) OnlyX(ctx context.Context) *TodoFilterHistory {
 	node, err := _q.Only(ctx)
 	if err != nil {
 		panic(err)
@@ -181,11 +157,11 @@ func (_q *UserQuery) OnlyX(ctx context.Context) *User {
 	return node
 }
 
-// OnlyID is like Only, but returns the only User ID in the query.
-// Returns a *NotSingularError when more than one User ID is found.
+// OnlyID is like Only, but returns the only TodoFilterHistory ID in the query.
+// Returns a *NotSingularError when more than one TodoFilterHistory ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (_q *UserQuery) OnlyID(ctx context.Context) (id int, err error) {
-	var ids []int
+func (_q *TodoFilterHistoryQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
+	var ids []uuid.UUID
 	if ids, err = _q.Limit(2).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryOnlyID)); err != nil {
 		return
 	}
@@ -193,15 +169,15 @@ func (_q *UserQuery) OnlyID(ctx context.Context) (id int, err error) {
 	case 1:
 		id = ids[0]
 	case 0:
-		err = &NotFoundError{user.Label}
+		err = &NotFoundError{todofilterhistory.Label}
 	default:
-		err = &NotSingularError{user.Label}
+		err = &NotSingularError{todofilterhistory.Label}
 	}
 	return
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (_q *UserQuery) OnlyIDX(ctx context.Context) int {
+func (_q *TodoFilterHistoryQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 	id, err := _q.OnlyID(ctx)
 	if err != nil {
 		panic(err)
@@ -209,18 +185,18 @@ func (_q *UserQuery) OnlyIDX(ctx context.Context) int {
 	return id
 }
 
-// All executes the query and returns a list of Users.
-func (_q *UserQuery) All(ctx context.Context) ([]*User, error) {
+// All executes the query and returns a list of TodoFilterHistories.
+func (_q *TodoFilterHistoryQuery) All(ctx context.Context) ([]*TodoFilterHistory, error) {
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryAll)
 	if err := _q.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
-	qr := querierAll[[]*User, *UserQuery]()
-	return withInterceptors[[]*User](ctx, _q, qr, _q.inters)
+	qr := querierAll[[]*TodoFilterHistory, *TodoFilterHistoryQuery]()
+	return withInterceptors[[]*TodoFilterHistory](ctx, _q, qr, _q.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
-func (_q *UserQuery) AllX(ctx context.Context) []*User {
+func (_q *TodoFilterHistoryQuery) AllX(ctx context.Context) []*TodoFilterHistory {
 	nodes, err := _q.All(ctx)
 	if err != nil {
 		panic(err)
@@ -228,20 +204,20 @@ func (_q *UserQuery) AllX(ctx context.Context) []*User {
 	return nodes
 }
 
-// IDs executes the query and returns a list of User IDs.
-func (_q *UserQuery) IDs(ctx context.Context) (ids []int, err error) {
+// IDs executes the query and returns a list of TodoFilterHistory IDs.
+func (_q *TodoFilterHistoryQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
 	if _q.ctx.Unique == nil && _q.path != nil {
 		_q.Unique(true)
 	}
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryIDs)
-	if err = _q.Select(user.FieldID).Scan(ctx, &ids); err != nil {
+	if err = _q.Select(todofilterhistory.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (_q *UserQuery) IDsX(ctx context.Context) []int {
+func (_q *TodoFilterHistoryQuery) IDsX(ctx context.Context) []uuid.UUID {
 	ids, err := _q.IDs(ctx)
 	if err != nil {
 		panic(err)
@@ -250,16 +226,16 @@ func (_q *UserQuery) IDsX(ctx context.Context) []int {
 }
 
 // Count returns the count of the given query.
-func (_q *UserQuery) Count(ctx context.Context) (int, error) {
+func (_q *TodoFilterHistoryQuery) Count(ctx context.Context) (int, error) {
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryCount)
 	if err := _q.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return withInterceptors[int](ctx, _q, querierCount[*UserQuery](), _q.inters)
+	return withInterceptors[int](ctx, _q, querierCount[*TodoFilterHistoryQuery](), _q.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
-func (_q *UserQuery) CountX(ctx context.Context) int {
+func (_q *TodoFilterHistoryQuery) CountX(ctx context.Context) int {
 	count, err := _q.Count(ctx)
 	if err != nil {
 		panic(err)
@@ -268,7 +244,7 @@ func (_q *UserQuery) CountX(ctx context.Context) int {
 }
 
 // Exist returns true if the query has elements in the graph.
-func (_q *UserQuery) Exist(ctx context.Context) (bool, error) {
+func (_q *TodoFilterHistoryQuery) Exist(ctx context.Context) (bool, error) {
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryExist)
 	switch _, err := _q.FirstID(ctx); {
 	case IsNotFound(err):
@@ -281,7 +257,7 @@ func (_q *UserQuery) Exist(ctx context.Context) (bool, error) {
 }
 
 // ExistX is like Exist, but panics if an error occurs.
-func (_q *UserQuery) ExistX(ctx context.Context) bool {
+func (_q *TodoFilterHistoryQuery) ExistX(ctx context.Context) bool {
 	exist, err := _q.Exist(ctx)
 	if err != nil {
 		panic(err)
@@ -289,45 +265,33 @@ func (_q *UserQuery) ExistX(ctx context.Context) bool {
 	return exist
 }
 
-// Clone returns a duplicate of the UserQuery builder, including all associated steps. It can be
+// Clone returns a duplicate of the TodoFilterHistoryQuery builder, including all associated steps. It can be
 // used to prepare common query builders and use them differently after the clone is made.
-func (_q *UserQuery) Clone() *UserQuery {
+func (_q *TodoFilterHistoryQuery) Clone() *TodoFilterHistoryQuery {
 	if _q == nil {
 		return nil
 	}
-	return &UserQuery{
-		config:                  _q.config,
-		ctx:                     _q.ctx.Clone(),
-		order:                   append([]user.OrderOption{}, _q.order...),
-		inters:                  append([]Interceptor{}, _q.inters...),
-		predicates:              append([]predicate.User{}, _q.predicates...),
-		withTodos:               _q.withTodos.Clone(),
-		withTodoFilterHistories: _q.withTodoFilterHistories.Clone(),
+	return &TodoFilterHistoryQuery{
+		config:     _q.config,
+		ctx:        _q.ctx.Clone(),
+		order:      append([]todofilterhistory.OrderOption{}, _q.order...),
+		inters:     append([]Interceptor{}, _q.inters...),
+		predicates: append([]predicate.TodoFilterHistory{}, _q.predicates...),
+		withUser:   _q.withUser.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
 	}
 }
 
-// WithTodos tells the query-builder to eager-load the nodes that are connected to
-// the "todos" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *UserQuery) WithTodos(opts ...func(*TodoQuery)) *UserQuery {
-	query := (&TodoClient{config: _q.config}).Query()
+// WithUser tells the query-builder to eager-load the nodes that are connected to
+// the "user" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *TodoFilterHistoryQuery) WithUser(opts ...func(*UserQuery)) *TodoFilterHistoryQuery {
+	query := (&UserClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	_q.withTodos = query
-	return _q
-}
-
-// WithTodoFilterHistories tells the query-builder to eager-load the nodes that are connected to
-// the "todo_filter_histories" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *UserQuery) WithTodoFilterHistories(opts ...func(*TodoFilterHistoryQuery)) *UserQuery {
-	query := (&TodoFilterHistoryClient{config: _q.config}).Query()
-	for _, opt := range opts {
-		opt(query)
-	}
-	_q.withTodoFilterHistories = query
+	_q.withUser = query
 	return _q
 }
 
@@ -337,19 +301,19 @@ func (_q *UserQuery) WithTodoFilterHistories(opts ...func(*TodoFilterHistoryQuer
 // Example:
 //
 //	var v []struct {
-//		Name string `json:"name,omitempty"`
+//		UserID int `json:"user_id,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
-//	client.User.Query().
-//		GroupBy(user.FieldName).
+//	client.TodoFilterHistory.Query().
+//		GroupBy(todofilterhistory.FieldUserID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-func (_q *UserQuery) GroupBy(field string, fields ...string) *UserGroupBy {
+func (_q *TodoFilterHistoryQuery) GroupBy(field string, fields ...string) *TodoFilterHistoryGroupBy {
 	_q.ctx.Fields = append([]string{field}, fields...)
-	grbuild := &UserGroupBy{build: _q}
+	grbuild := &TodoFilterHistoryGroupBy{build: _q}
 	grbuild.flds = &_q.ctx.Fields
-	grbuild.label = user.Label
+	grbuild.label = todofilterhistory.Label
 	grbuild.scan = grbuild.Scan
 	return grbuild
 }
@@ -360,26 +324,26 @@ func (_q *UserQuery) GroupBy(field string, fields ...string) *UserGroupBy {
 // Example:
 //
 //	var v []struct {
-//		Name string `json:"name,omitempty"`
+//		UserID int `json:"user_id,omitempty"`
 //	}
 //
-//	client.User.Query().
-//		Select(user.FieldName).
+//	client.TodoFilterHistory.Query().
+//		Select(todofilterhistory.FieldUserID).
 //		Scan(ctx, &v)
-func (_q *UserQuery) Select(fields ...string) *UserSelect {
+func (_q *TodoFilterHistoryQuery) Select(fields ...string) *TodoFilterHistorySelect {
 	_q.ctx.Fields = append(_q.ctx.Fields, fields...)
-	sbuild := &UserSelect{UserQuery: _q}
-	sbuild.label = user.Label
+	sbuild := &TodoFilterHistorySelect{TodoFilterHistoryQuery: _q}
+	sbuild.label = todofilterhistory.Label
 	sbuild.flds, sbuild.scan = &_q.ctx.Fields, sbuild.Scan
 	return sbuild
 }
 
-// Aggregate returns a UserSelect configured with the given aggregations.
-func (_q *UserQuery) Aggregate(fns ...AggregateFunc) *UserSelect {
+// Aggregate returns a TodoFilterHistorySelect configured with the given aggregations.
+func (_q *TodoFilterHistoryQuery) Aggregate(fns ...AggregateFunc) *TodoFilterHistorySelect {
 	return _q.Select().Aggregate(fns...)
 }
 
-func (_q *UserQuery) prepareQuery(ctx context.Context) error {
+func (_q *TodoFilterHistoryQuery) prepareQuery(ctx context.Context) error {
 	for _, inter := range _q.inters {
 		if inter == nil {
 			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
@@ -391,7 +355,7 @@ func (_q *UserQuery) prepareQuery(ctx context.Context) error {
 		}
 	}
 	for _, f := range _q.ctx.Fields {
-		if !user.ValidColumn(f) {
+		if !todofilterhistory.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
 	}
@@ -405,20 +369,19 @@ func (_q *UserQuery) prepareQuery(ctx context.Context) error {
 	return nil
 }
 
-func (_q *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, error) {
+func (_q *TodoFilterHistoryQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*TodoFilterHistory, error) {
 	var (
-		nodes       = []*User{}
+		nodes       = []*TodoFilterHistory{}
 		_spec       = _q.querySpec()
-		loadedTypes = [2]bool{
-			_q.withTodos != nil,
-			_q.withTodoFilterHistories != nil,
+		loadedTypes = [1]bool{
+			_q.withUser != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
-		return (*User).scanValues(nil, columns)
+		return (*TodoFilterHistory).scanValues(nil, columns)
 	}
 	_spec.Assign = func(columns []string, values []any) error {
-		node := &User{config: _q.config}
+		node := &TodoFilterHistory{config: _q.config}
 		nodes = append(nodes, node)
 		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
@@ -435,87 +398,46 @@ func (_q *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := _q.withTodos; query != nil {
-		if err := _q.loadTodos(ctx, query, nodes,
-			func(n *User) { n.Edges.Todos = []*Todo{} },
-			func(n *User, e *Todo) { n.Edges.Todos = append(n.Edges.Todos, e) }); err != nil {
-			return nil, err
-		}
-	}
-	if query := _q.withTodoFilterHistories; query != nil {
-		if err := _q.loadTodoFilterHistories(ctx, query, nodes,
-			func(n *User) { n.Edges.TodoFilterHistories = []*TodoFilterHistory{} },
-			func(n *User, e *TodoFilterHistory) {
-				n.Edges.TodoFilterHistories = append(n.Edges.TodoFilterHistories, e)
-			}); err != nil {
+	if query := _q.withUser; query != nil {
+		if err := _q.loadUser(ctx, query, nodes, nil,
+			func(n *TodoFilterHistory, e *User) { n.Edges.User = e }); err != nil {
 			return nil, err
 		}
 	}
 	return nodes, nil
 }
 
-func (_q *UserQuery) loadTodos(ctx context.Context, query *TodoQuery, nodes []*User, init func(*User), assign func(*User, *Todo)) error {
-	fks := make([]driver.Value, 0, len(nodes))
-	nodeids := make(map[int]*User)
+func (_q *TodoFilterHistoryQuery) loadUser(ctx context.Context, query *UserQuery, nodes []*TodoFilterHistory, init func(*TodoFilterHistory), assign func(*TodoFilterHistory, *User)) error {
+	ids := make([]int, 0, len(nodes))
+	nodeids := make(map[int][]*TodoFilterHistory)
 	for i := range nodes {
-		fks = append(fks, nodes[i].ID)
-		nodeids[nodes[i].ID] = nodes[i]
-		if init != nil {
-			init(nodes[i])
+		fk := nodes[i].UserID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
 		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
 	}
-	if len(query.ctx.Fields) > 0 {
-		query.ctx.AppendFieldOnce(todo.FieldUserID)
+	if len(ids) == 0 {
+		return nil
 	}
-	query.Where(predicate.Todo(func(s *sql.Selector) {
-		s.Where(sql.InValues(s.C(user.TodosColumn), fks...))
-	}))
+	query.Where(user.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.UserID
-		node, ok := nodeids[fk]
+		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "user_id" returned %v for node %v`, fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "user_id" returned %v`, n.ID)
 		}
-		assign(node, n)
-	}
-	return nil
-}
-func (_q *UserQuery) loadTodoFilterHistories(ctx context.Context, query *TodoFilterHistoryQuery, nodes []*User, init func(*User), assign func(*User, *TodoFilterHistory)) error {
-	fks := make([]driver.Value, 0, len(nodes))
-	nodeids := make(map[int]*User)
-	for i := range nodes {
-		fks = append(fks, nodes[i].ID)
-		nodeids[nodes[i].ID] = nodes[i]
-		if init != nil {
-			init(nodes[i])
+		for i := range nodes {
+			assign(nodes[i], n)
 		}
-	}
-	if len(query.ctx.Fields) > 0 {
-		query.ctx.AppendFieldOnce(todofilterhistory.FieldUserID)
-	}
-	query.Where(predicate.TodoFilterHistory(func(s *sql.Selector) {
-		s.Where(sql.InValues(s.C(user.TodoFilterHistoriesColumn), fks...))
-	}))
-	neighbors, err := query.All(ctx)
-	if err != nil {
-		return err
-	}
-	for _, n := range neighbors {
-		fk := n.UserID
-		node, ok := nodeids[fk]
-		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "user_id" returned %v for node %v`, fk, n.ID)
-		}
-		assign(node, n)
 	}
 	return nil
 }
 
-func (_q *UserQuery) sqlCount(ctx context.Context) (int, error) {
+func (_q *TodoFilterHistoryQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := _q.querySpec()
 	if len(_q.modifiers) > 0 {
 		_spec.Modifiers = _q.modifiers
@@ -527,8 +449,8 @@ func (_q *UserQuery) sqlCount(ctx context.Context) (int, error) {
 	return sqlgraph.CountNodes(ctx, _q.driver, _spec)
 }
 
-func (_q *UserQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := sqlgraph.NewQuerySpec(user.Table, user.Columns, sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt))
+func (_q *TodoFilterHistoryQuery) querySpec() *sqlgraph.QuerySpec {
+	_spec := sqlgraph.NewQuerySpec(todofilterhistory.Table, todofilterhistory.Columns, sqlgraph.NewFieldSpec(todofilterhistory.FieldID, field.TypeUUID))
 	_spec.From = _q.sql
 	if unique := _q.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
@@ -537,11 +459,14 @@ func (_q *UserQuery) querySpec() *sqlgraph.QuerySpec {
 	}
 	if fields := _q.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
-		_spec.Node.Columns = append(_spec.Node.Columns, user.FieldID)
+		_spec.Node.Columns = append(_spec.Node.Columns, todofilterhistory.FieldID)
 		for i := range fields {
-			if fields[i] != user.FieldID {
+			if fields[i] != todofilterhistory.FieldID {
 				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
 			}
+		}
+		if _q.withUser != nil {
+			_spec.Node.AddColumnOnce(todofilterhistory.FieldUserID)
 		}
 	}
 	if ps := _q.predicates; len(ps) > 0 {
@@ -567,12 +492,12 @@ func (_q *UserQuery) querySpec() *sqlgraph.QuerySpec {
 	return _spec
 }
 
-func (_q *UserQuery) sqlQuery(ctx context.Context) *sql.Selector {
+func (_q *TodoFilterHistoryQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(_q.driver.Dialect())
-	t1 := builder.Table(user.Table)
+	t1 := builder.Table(todofilterhistory.Table)
 	columns := _q.ctx.Fields
 	if len(columns) == 0 {
-		columns = user.Columns
+		columns = todofilterhistory.Columns
 	}
 	selector := builder.Select(t1.Columns(columns...)...).From(t1)
 	if _q.sql != nil {
@@ -605,7 +530,7 @@ func (_q *UserQuery) sqlQuery(ctx context.Context) *sql.Selector {
 // ForUpdate locks the selected rows against concurrent updates, and prevent them from being
 // updated, deleted or "selected ... for update" by other sessions, until the transaction is
 // either committed or rolled-back.
-func (_q *UserQuery) ForUpdate(opts ...sql.LockOption) *UserQuery {
+func (_q *TodoFilterHistoryQuery) ForUpdate(opts ...sql.LockOption) *TodoFilterHistoryQuery {
 	if _q.driver.Dialect() == dialect.Postgres {
 		_q.Unique(false)
 	}
@@ -618,7 +543,7 @@ func (_q *UserQuery) ForUpdate(opts ...sql.LockOption) *UserQuery {
 // ForShare behaves similarly to ForUpdate, except that it acquires a shared mode lock
 // on any rows that are read. Other sessions can read the rows, but cannot modify them
 // until your transaction commits.
-func (_q *UserQuery) ForShare(opts ...sql.LockOption) *UserQuery {
+func (_q *TodoFilterHistoryQuery) ForShare(opts ...sql.LockOption) *TodoFilterHistoryQuery {
 	if _q.driver.Dialect() == dialect.Postgres {
 		_q.Unique(false)
 	}
@@ -628,28 +553,28 @@ func (_q *UserQuery) ForShare(opts ...sql.LockOption) *UserQuery {
 	return _q
 }
 
-// UserGroupBy is the group-by builder for User entities.
-type UserGroupBy struct {
+// TodoFilterHistoryGroupBy is the group-by builder for TodoFilterHistory entities.
+type TodoFilterHistoryGroupBy struct {
 	selector
-	build *UserQuery
+	build *TodoFilterHistoryQuery
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
-func (_g *UserGroupBy) Aggregate(fns ...AggregateFunc) *UserGroupBy {
+func (_g *TodoFilterHistoryGroupBy) Aggregate(fns ...AggregateFunc) *TodoFilterHistoryGroupBy {
 	_g.fns = append(_g.fns, fns...)
 	return _g
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (_g *UserGroupBy) Scan(ctx context.Context, v any) error {
+func (_g *TodoFilterHistoryGroupBy) Scan(ctx context.Context, v any) error {
 	ctx = setContextOp(ctx, _g.build.ctx, ent.OpQueryGroupBy)
 	if err := _g.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*UserQuery, *UserGroupBy](ctx, _g.build, _g, _g.build.inters, v)
+	return scanWithInterceptors[*TodoFilterHistoryQuery, *TodoFilterHistoryGroupBy](ctx, _g.build, _g, _g.build.inters, v)
 }
 
-func (_g *UserGroupBy) sqlScan(ctx context.Context, root *UserQuery, v any) error {
+func (_g *TodoFilterHistoryGroupBy) sqlScan(ctx context.Context, root *TodoFilterHistoryQuery, v any) error {
 	selector := root.sqlQuery(ctx).Select()
 	aggregation := make([]string, 0, len(_g.fns))
 	for _, fn := range _g.fns {
@@ -676,28 +601,28 @@ func (_g *UserGroupBy) sqlScan(ctx context.Context, root *UserQuery, v any) erro
 	return sql.ScanSlice(rows, v)
 }
 
-// UserSelect is the builder for selecting fields of User entities.
-type UserSelect struct {
-	*UserQuery
+// TodoFilterHistorySelect is the builder for selecting fields of TodoFilterHistory entities.
+type TodoFilterHistorySelect struct {
+	*TodoFilterHistoryQuery
 	selector
 }
 
 // Aggregate adds the given aggregation functions to the selector query.
-func (_s *UserSelect) Aggregate(fns ...AggregateFunc) *UserSelect {
+func (_s *TodoFilterHistorySelect) Aggregate(fns ...AggregateFunc) *TodoFilterHistorySelect {
 	_s.fns = append(_s.fns, fns...)
 	return _s
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (_s *UserSelect) Scan(ctx context.Context, v any) error {
+func (_s *TodoFilterHistorySelect) Scan(ctx context.Context, v any) error {
 	ctx = setContextOp(ctx, _s.ctx, ent.OpQuerySelect)
 	if err := _s.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*UserQuery, *UserSelect](ctx, _s.UserQuery, _s, _s.inters, v)
+	return scanWithInterceptors[*TodoFilterHistoryQuery, *TodoFilterHistorySelect](ctx, _s.TodoFilterHistoryQuery, _s, _s.inters, v)
 }
 
-func (_s *UserSelect) sqlScan(ctx context.Context, root *UserQuery, v any) error {
+func (_s *TodoFilterHistorySelect) sqlScan(ctx context.Context, root *TodoFilterHistoryQuery, v any) error {
 	selector := root.sqlQuery(ctx)
 	aggregation := make([]string, 0, len(_s.fns))
 	for _, fn := range _s.fns {

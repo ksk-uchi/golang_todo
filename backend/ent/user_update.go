@@ -9,11 +9,13 @@ import (
 	"time"
 	"todo-app/ent/predicate"
 	"todo-app/ent/todo"
+	"todo-app/ent/todofilterhistory"
 	"todo-app/ent/user"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
 )
 
 // UserUpdate is the builder for updating User entities.
@@ -100,6 +102,21 @@ func (_u *UserUpdate) AddTodos(v ...*Todo) *UserUpdate {
 	return _u.AddTodoIDs(ids...)
 }
 
+// AddTodoFilterHistoryIDs adds the "todo_filter_histories" edge to the TodoFilterHistory entity by IDs.
+func (_u *UserUpdate) AddTodoFilterHistoryIDs(ids ...uuid.UUID) *UserUpdate {
+	_u.mutation.AddTodoFilterHistoryIDs(ids...)
+	return _u
+}
+
+// AddTodoFilterHistories adds the "todo_filter_histories" edges to the TodoFilterHistory entity.
+func (_u *UserUpdate) AddTodoFilterHistories(v ...*TodoFilterHistory) *UserUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddTodoFilterHistoryIDs(ids...)
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (_u *UserUpdate) Mutation() *UserMutation {
 	return _u.mutation
@@ -124,6 +141,27 @@ func (_u *UserUpdate) RemoveTodos(v ...*Todo) *UserUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveTodoIDs(ids...)
+}
+
+// ClearTodoFilterHistories clears all "todo_filter_histories" edges to the TodoFilterHistory entity.
+func (_u *UserUpdate) ClearTodoFilterHistories() *UserUpdate {
+	_u.mutation.ClearTodoFilterHistories()
+	return _u
+}
+
+// RemoveTodoFilterHistoryIDs removes the "todo_filter_histories" edge to TodoFilterHistory entities by IDs.
+func (_u *UserUpdate) RemoveTodoFilterHistoryIDs(ids ...uuid.UUID) *UserUpdate {
+	_u.mutation.RemoveTodoFilterHistoryIDs(ids...)
+	return _u
+}
+
+// RemoveTodoFilterHistories removes "todo_filter_histories" edges to TodoFilterHistory entities.
+func (_u *UserUpdate) RemoveTodoFilterHistories(v ...*TodoFilterHistory) *UserUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveTodoFilterHistoryIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -242,6 +280,51 @@ func (_u *UserUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if _u.mutation.TodoFilterHistoriesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.TodoFilterHistoriesTable,
+			Columns: []string{user.TodoFilterHistoriesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(todofilterhistory.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedTodoFilterHistoriesIDs(); len(nodes) > 0 && !_u.mutation.TodoFilterHistoriesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.TodoFilterHistoriesTable,
+			Columns: []string{user.TodoFilterHistoriesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(todofilterhistory.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.TodoFilterHistoriesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.TodoFilterHistoriesTable,
+			Columns: []string{user.TodoFilterHistoriesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(todofilterhistory.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{user.Label}
@@ -333,6 +416,21 @@ func (_u *UserUpdateOne) AddTodos(v ...*Todo) *UserUpdateOne {
 	return _u.AddTodoIDs(ids...)
 }
 
+// AddTodoFilterHistoryIDs adds the "todo_filter_histories" edge to the TodoFilterHistory entity by IDs.
+func (_u *UserUpdateOne) AddTodoFilterHistoryIDs(ids ...uuid.UUID) *UserUpdateOne {
+	_u.mutation.AddTodoFilterHistoryIDs(ids...)
+	return _u
+}
+
+// AddTodoFilterHistories adds the "todo_filter_histories" edges to the TodoFilterHistory entity.
+func (_u *UserUpdateOne) AddTodoFilterHistories(v ...*TodoFilterHistory) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddTodoFilterHistoryIDs(ids...)
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (_u *UserUpdateOne) Mutation() *UserMutation {
 	return _u.mutation
@@ -357,6 +455,27 @@ func (_u *UserUpdateOne) RemoveTodos(v ...*Todo) *UserUpdateOne {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveTodoIDs(ids...)
+}
+
+// ClearTodoFilterHistories clears all "todo_filter_histories" edges to the TodoFilterHistory entity.
+func (_u *UserUpdateOne) ClearTodoFilterHistories() *UserUpdateOne {
+	_u.mutation.ClearTodoFilterHistories()
+	return _u
+}
+
+// RemoveTodoFilterHistoryIDs removes the "todo_filter_histories" edge to TodoFilterHistory entities by IDs.
+func (_u *UserUpdateOne) RemoveTodoFilterHistoryIDs(ids ...uuid.UUID) *UserUpdateOne {
+	_u.mutation.RemoveTodoFilterHistoryIDs(ids...)
+	return _u
+}
+
+// RemoveTodoFilterHistories removes "todo_filter_histories" edges to TodoFilterHistory entities.
+func (_u *UserUpdateOne) RemoveTodoFilterHistories(v ...*TodoFilterHistory) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveTodoFilterHistoryIDs(ids...)
 }
 
 // Where appends a list predicates to the UserUpdate builder.
@@ -498,6 +617,51 @@ func (_u *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(todo.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.TodoFilterHistoriesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.TodoFilterHistoriesTable,
+			Columns: []string{user.TodoFilterHistoriesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(todofilterhistory.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedTodoFilterHistoriesIDs(); len(nodes) > 0 && !_u.mutation.TodoFilterHistoriesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.TodoFilterHistoriesTable,
+			Columns: []string{user.TodoFilterHistoriesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(todofilterhistory.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.TodoFilterHistoriesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.TodoFilterHistoriesTable,
+			Columns: []string{user.TodoFilterHistoriesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(todofilterhistory.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
