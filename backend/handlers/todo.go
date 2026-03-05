@@ -15,15 +15,50 @@ import (
 )
 
 type TodoHandler struct {
-	logger  *slog.Logger
-	service *services.TodoService
+	logger               *slog.Logger
+	service              *services.TodoService
+	filterHistoryService services.ITodoFilterHistoryService
 }
 
-func NewTodoHandler(logger *slog.Logger, service *services.TodoService) *TodoHandler {
+func NewTodoHandler(logger *slog.Logger, service *services.TodoService, filterHistoryService services.ITodoFilterHistoryService) *TodoHandler {
 	return &TodoHandler{
-		logger:  logger,
-		service: service,
+		logger:               logger,
+		service:              service,
+		filterHistoryService: filterHistoryService,
 	}
+}
+
+func (h *TodoHandler) ListTodoFilterHistories(c *echo.Context) error {
+	utils.LogRequest(h.logger, c)
+
+	ctx := c.Request().Context()
+	u := ctx.Value("user")
+	if u == nil {
+		return utils.HandleError(h.logger, c, errors.New("user not found in context"), http.StatusUnauthorized)
+	}
+	userEntity := u.(*ent.User)
+
+	histories, err := h.filterHistoryService.FetchLatestFilters(ctx, userEntity.ID)
+	if err != nil {
+		return utils.HandleError(h.logger, c, err, http.StatusInternalServerError)
+	}
+
+	type filterQuery struct {
+		Query string `json:"query"`
+		ID    string `json:"id"`
+	}
+
+	queries := make([]filterQuery, len(histories))
+	for i, h := range histories {
+		queries[i] = filterQuery{
+			Query: h.Query,
+			ID:    h.ID.String(),
+		}
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"queries": queries,
+	})
 }
 
 func (h *TodoHandler) CreateTodo(c *echo.Context) error {
