@@ -17,17 +17,25 @@ import (
 
 type spyTodoRepo struct {
 	// repositories.TodoRepository (removed embedding)
-	fetchTodos       func(limit int, offset int, includeDone bool) ([]*ent.Todo, error)
-	count            func(includeDone bool) (int, error)
-	create           func(title string, description string) (*ent.Todo, error)
-	update           func(id int, title *string, description *string) (*ent.Todo, error)
-	updateDoneStatus func(id int, isDone bool) (*ent.Todo, error)
-	find             func(id int) (*ent.Todo, error)
-	delete           func(id int) error
-	getTodoForUpdate func(id int) (*ent.Todo, error)
+	fetchTodos         func(limit int, offset int, includeDone bool) ([]*ent.Todo, error)
+	count              func(includeDone bool) (int, error)
+	create             func(title string, description string) (*ent.Todo, error)
+	update             func(id int, title *string, description *string) (*ent.Todo, error)
+	updateDoneStatus   func(id int, isDone bool) (*ent.Todo, error)
+	find               func(id int) (*ent.Todo, error)
+	delete             func(id int) error
+	getTodoForUpdate   func(id int) (*ent.Todo, error)
+	fetchTodosByDoneAt func(doneFrom *time.Time, doneTo *time.Time) ([]*ent.Todo, error)
 }
 
 // ... existing methods ...
+
+func (s *spyTodoRepo) FetchTodosByDoneAt(ctx context.Context, doneFrom *time.Time, doneTo *time.Time) ([]*ent.Todo, error) {
+	if s.fetchTodosByDoneAt != nil {
+		return s.fetchTodosByDoneAt(doneFrom, doneTo)
+	}
+	return nil, nil
+}
 
 func (s *spyTodoRepo) FetchTodos(ctx context.Context, limit int, offset int, includeDone bool) ([]*ent.Todo, error) {
 	if s.fetchTodos != nil {

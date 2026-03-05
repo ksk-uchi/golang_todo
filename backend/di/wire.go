@@ -19,8 +19,9 @@ import (
 // todo
 var todoSet = wire.NewSet(
 	repositories.NewTodoRepository,
-	wire.Bind(new(services.ITodoRepository), new(*repositories.TodoRepository)),
+	wire.Bind(new(repositories.ITodoRepository), new(*repositories.TodoRepository)),
 	services.NewTodoService,
+	services.NewAIService,
 	handlers.NewTodoHandler,
 	routes.NewTodoRouter,
 )
