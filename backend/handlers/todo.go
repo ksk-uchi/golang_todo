@@ -15,15 +15,33 @@ import (
 )
 
 type TodoHandler struct {
-	logger  *slog.Logger
-	service *services.TodoService
+	logger               *slog.Logger
+	service              *services.TodoService
+	filterHistoryService services.ITodoFilterHistoryService
 }
 
-func NewTodoHandler(logger *slog.Logger, service *services.TodoService) *TodoHandler {
+func NewTodoHandler(logger *slog.Logger, service *services.TodoService, filterHistoryService services.ITodoFilterHistoryService) *TodoHandler {
 	return &TodoHandler{
-		logger:  logger,
-		service: service,
+		logger:               logger,
+		service:              service,
+		filterHistoryService: filterHistoryService,
 	}
+}
+
+func (h *TodoHandler) ListTodoFilterHistories(c *echo.Context) error {
+	utils.LogRequest(h.logger, c)
+
+	ctx := c.Request().Context()
+	histories, err := h.filterHistoryService.FetchLatestFilters(ctx)
+	if err != nil {
+		return utils.HandleError(h.logger, c, err, http.StatusInternalServerError)
+	}
+
+	res := dto.ListTodoFilterHistoriesResponseDto{
+		Queries: dto.EntitiesToTodoFilterHistoryQueryDtos(histories),
+	}
+
+	return c.JSON(http.StatusOK, res)
 }
 
 func (h *TodoHandler) CreateTodo(c *echo.Context) error {

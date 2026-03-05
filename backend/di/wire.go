@@ -20,8 +20,12 @@ import (
 var todoSet = wire.NewSet(
 	repositories.NewTodoRepository,
 	wire.Bind(new(repositories.ITodoRepository), new(*repositories.TodoRepository)),
+	repositories.NewTodoFilterHistoryRepository,
+	wire.Bind(new(repositories.ITodoFilterHistoryRepository), new(*repositories.TodoFilterHistoryRepository)),
 	services.NewTodoService,
 	services.NewAIService,
+	services.NewTodoFilterHistoryService,
+	wire.Bind(new(services.ITodoFilterHistoryService), new(*services.TodoFilterHistoryService)),
 	handlers.NewTodoHandler,
 	routes.NewTodoRouter,
 )

@@ -29,7 +29,9 @@ func InitializeApp() (*App, func(), error) {
 	}
 	todoRepository := repositories.NewTodoRepository(client, logger)
 	todoService := services.NewTodoService(client, logger, todoRepository)
-	todoHandler := handlers.NewTodoHandler(logger, todoService)
+	todoFilterHistoryRepository := repositories.NewTodoFilterHistoryRepository(client)
+	todoFilterHistoryService := services.NewTodoFilterHistoryService(todoFilterHistoryRepository, logger)
+	todoHandler := handlers.NewTodoHandler(logger, todoService, todoFilterHistoryService)
 	todoRouter := routes.NewTodoRouter(todoHandler)
 	userRepository := repositories.NewUserRepository(client)
 	authService := services.NewAuthService(userRepository)
@@ -47,7 +49,9 @@ func InitializeTestApp(e *echo.Echo, client *ent.Client) (*App, error) {
 	logger := NewLogger()
 	todoRepository := repositories.NewTodoRepository(client, logger)
 	todoService := services.NewTodoService(client, logger, todoRepository)
-	todoHandler := handlers.NewTodoHandler(logger, todoService)
+	todoFilterHistoryRepository := repositories.NewTodoFilterHistoryRepository(client)
+	todoFilterHistoryService := services.NewTodoFilterHistoryService(todoFilterHistoryRepository, logger)
+	todoHandler := handlers.NewTodoHandler(logger, todoService, todoFilterHistoryService)
 	todoRouter := routes.NewTodoRouter(todoHandler)
 	userRepository := repositories.NewUserRepository(client)
 	authService := services.NewAuthService(userRepository)
@@ -62,7 +66,7 @@ func InitializeTestApp(e *echo.Echo, client *ent.Client) (*App, error) {
 // wire.go:
 
 // todo
-var todoSet = wire.NewSet(repositories.NewTodoRepository, wire.Bind(new(repositories.ITodoRepository), new(*repositories.TodoRepository)), services.NewTodoService, services.NewAIService, handlers.NewTodoHandler, routes.NewTodoRouter)
+var todoSet = wire.NewSet(repositories.NewTodoRepository, wire.Bind(new(repositories.ITodoRepository), new(*repositories.TodoRepository)), repositories.NewTodoFilterHistoryRepository, wire.Bind(new(repositories.ITodoFilterHistoryRepository), new(*repositories.TodoFilterHistoryRepository)), services.NewTodoService, services.NewAIService, services.NewTodoFilterHistoryService, wire.Bind(new(services.ITodoFilterHistoryService), new(*services.TodoFilterHistoryService)), handlers.NewTodoHandler, routes.NewTodoRouter)
 
 // auth
 var authSet = wire.NewSet(repositories.NewUserRepository, wire.Bind(new(repositories.IUserRepository), new(*repositories.UserRepository)), services.NewAuthService, wire.Bind(new(services.IAuthService), new(*services.AuthService)), handlers.NewAuthHandler, routes.NewAuthRouter, middleware.NewAuthMiddleware)

@@ -322,6 +322,42 @@ func TestTodoHandler_UpdateTodo_Integration(t *testing.T) {
 	})
 }
 
+func TestTodoHandler_ListTodoFilterHistories_Integration(t *testing.T) {
+	t.Run("検索履歴の取得", func(t *testing.T) {
+		cleanupDatabase(t)
+		e := echo.New()
+		app, err := di.InitializeTestApp(e, testClient)
+		assert.NoError(t, err)
+
+		app.Router.Setup(e)
+
+		user := testClient.User.Create().SetName("test").SetEmail("test").SetPassword("test").SaveX(context.Background())
+
+		// Create 6 histories
+		for i := 1; i <= 6; i++ {
+			testClient.TodoFilterHistory.Create().
+				SetQuery(fmt.Sprintf("Query %d", i)).
+				SetUserID(user.ID).
+				SetCreatedAt(time.Now().Add(time.Duration(i) * time.Minute)).
+				SaveX(context.Background())
+		}
+
+		req, rec := createAuthenticatedRequest(t, http.MethodGet, "/todo/filter_histories", "", user.ID)
+		e.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+
+		var res dto.ListTodoFilterHistoriesResponseDto
+		err = json.Unmarshal(rec.Body.Bytes(), &res)
+		assert.NoError(t, err)
+
+		// Should return latest 5
+		assert.Len(t, res.Queries, 5)
+		assert.Equal(t, "Query 6", res.Queries[0].Query)
+		assert.Equal(t, "Query 2", res.Queries[4].Query)
+	})
+}
+
 func TestTodoHandler_DeleteTodo_Integration(t *testing.T) {
 	t.Run("Todo 削除", func(t *testing.T) {
 		cleanupDatabase(t)
