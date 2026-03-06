@@ -20,6 +20,7 @@ func (r *TodoRouter) SetupTodoRoute(eg *echo.Group) {
 	eg.GET("", r.TodoHandler.ListTodo)
 	eg.POST("", r.TodoHandler.CreateTodo)
 	eg.GET("/filter_histories", r.TodoHandler.ListTodoFilterHistories)
+	eg.GET("/ai_filter", r.TodoHandler.FilterTodosByQuery)
 	eg.PATCH("/:id", r.TodoHandler.UpdateTodo)
 	eg.PUT("/:id/done", r.TodoHandler.UpdateDoneStatus)
 	eg.DELETE("/:id", r.TodoHandler.DeleteTodo)

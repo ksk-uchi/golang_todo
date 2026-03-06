@@ -44,6 +44,17 @@ func CreateAIClient(ctx context.Context) (IGenAIClient, error) {
 // var used to override in tests
 var createAIClientFunc = CreateAIClient
 
+// SetCreateAIClientFunc sets the function used to create the AI client.
+// This is used for testing.
+func SetCreateAIClientFunc(f func(ctx context.Context) (IGenAIClient, error)) {
+	createAIClientFunc = f
+}
+
+// ResetCreateAIClientFunc resets the function used to create the AI client to the default.
+func ResetCreateAIClientFunc() {
+	createAIClientFunc = CreateAIClient
+}
+
 type AIService struct {
 	repo repositories.ITodoRepository
 }

@@ -11,11 +11,14 @@ import (
 	"todo-app/di"
 	"todo-app/dto"
 	"todo-app/ent/todo"
+	"todo-app/services"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/labstack/echo/v5"
 	_ "github.com/mattn/go-sqlite3" // テスト実行にドライバが必要
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"google.golang.org/genai"
 )
 
 func TestTodoHandler_ListTodo_Integration(t *testing.T) {
@@ -501,5 +504,82 @@ func TestTodoHandler_UpdateDoneStatus(t *testing.T) {
 		e.ServeHTTP(rec, req)
 
 		assert.Equal(t, http.StatusNotFound, rec.Code)
+	})
+}
+
+type mockGenAIClient struct {
+	mock.Mock
+}
+
+func (m *mockGenAIClient) GenerateContent(ctx context.Context, model string, contents []*genai.Content, config *genai.GenerateContentConfig) (*genai.GenerateContentResponse, error) {
+	args := m.Called(ctx, model, contents, config)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*genai.GenerateContentResponse), args.Error(1)
+}
+
+func TestTodoHandler_FilterTodosByQuery_Integration(t *testing.T) {
+	t.Run("AIフィルタによるToDo取得と履歴保存の成功", func(t *testing.T) {
+		cleanupDatabase(t)
+		e := echo.New()
+		app, err := di.InitializeTestApp(e, testClient)
+		assert.NoError(t, err)
+		app.Router.Setup(e)
+
+		user := testClient.User.Create().SetName("test").SetEmail("test").SetPassword("test").SaveX(context.Background())
+
+		// ToDo を作成
+		testClient.Todo.Create().
+			SetTitle("Target Todo").
+			SetDescription("Matching AI filter").
+			SetDoneAt(time.Date(2026, 3, 1, 10, 0, 0, 0, time.Local)).
+			SetUser(user).
+			SaveX(context.Background())
+
+		// GenAI クライアントをモック
+		mClient := new(mockGenAIClient)
+		services.SetCreateAIClientFunc(func(ctx context.Context) (services.IGenAIClient, error) {
+			return mClient, nil
+		})
+		defer services.ResetCreateAIClientFunc()
+
+		expectedResponse := &genai.GenerateContentResponse{
+			Candidates: []*genai.Candidate{
+				{
+					Content: &genai.Content{
+						Parts: []*genai.Part{
+							{
+								FunctionCall: &genai.FunctionCall{
+									Name: "ListTodosByDoneAt",
+									Args: map[string]interface{}{
+										"done_from": "2026-03-01T00:00:00Z",
+										"done_to":   "2026-03-01T23:59:59Z",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		mClient.On("GenerateContent", mock.Anything, "gemini-3-flash-preview", mock.Anything, mock.Anything).Return(expectedResponse, nil)
+
+		req, rec := createAuthenticatedRequest(t, http.MethodGet, "/todo/ai_filter?query=done+on+March+1st", "", user.ID)
+		e.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+
+		var res []dto.TodoDto
+		err = json.Unmarshal(rec.Body.Bytes(), &res)
+		assert.NoError(t, err)
+		assert.Len(t, res, 1)
+		assert.Equal(t, "Target Todo", res[0].Title)
+
+		// 履歴が保存されているか確認
+		history, err := testClient.TodoFilterHistory.Query().First(context.Background())
+		assert.NoError(t, err)
+		assert.Equal(t, "done on March 1st", history.Query)
+		assert.Equal(t, "ListTodosByDoneAt", history.FunctionName)
 	})
 }
