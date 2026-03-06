@@ -16,6 +16,7 @@ import (
 	"todo-app/repositories"
 	"todo-app/routes"
 	"todo-app/services"
+	"todo-app/utils"
 )
 
 // Injectors from wire.go:
@@ -31,7 +32,9 @@ func InitializeApp() (*App, func(), error) {
 	todoService := services.NewTodoService(client, logger, todoRepository)
 	todoFilterHistoryRepository := repositories.NewTodoFilterHistoryRepository(client)
 	todoFilterHistoryService := services.NewTodoFilterHistoryService(todoFilterHistoryRepository, logger)
-	todoHandler := handlers.NewTodoHandler(logger, todoService, todoFilterHistoryService)
+	aiService := services.NewAIService(todoRepository)
+	iaiFactory := utils.NewAIFactory()
+	todoHandler := handlers.NewTodoHandler(logger, todoService, todoFilterHistoryService, aiService, iaiFactory)
 	todoRouter := routes.NewTodoRouter(todoHandler)
 	userRepository := repositories.NewUserRepository(client)
 	authService := services.NewAuthService(userRepository)
@@ -45,13 +48,14 @@ func InitializeApp() (*App, func(), error) {
 	}, nil
 }
 
-func InitializeTestApp(e *echo.Echo, client *ent.Client) (*App, error) {
+func InitializeTestApp(e *echo.Echo, client *ent.Client, aiFactory utils.IAIFactory) (*App, error) {
 	logger := NewLogger()
 	todoRepository := repositories.NewTodoRepository(client, logger)
 	todoService := services.NewTodoService(client, logger, todoRepository)
 	todoFilterHistoryRepository := repositories.NewTodoFilterHistoryRepository(client)
 	todoFilterHistoryService := services.NewTodoFilterHistoryService(todoFilterHistoryRepository, logger)
-	todoHandler := handlers.NewTodoHandler(logger, todoService, todoFilterHistoryService)
+	aiService := services.NewAIService(todoRepository)
+	todoHandler := handlers.NewTodoHandler(logger, todoService, todoFilterHistoryService, aiService, aiFactory)
 	todoRouter := routes.NewTodoRouter(todoHandler)
 	userRepository := repositories.NewUserRepository(client)
 	authService := services.NewAuthService(userRepository)

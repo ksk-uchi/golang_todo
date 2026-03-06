@@ -19,6 +19,7 @@ type ITodoRepository interface {
 	UpdateDoneStatus(ctx context.Context, id int, isDone bool) (*ent.Todo, error)
 	DeleteTodo(ctx context.Context, id int) error
 	FetchTodosByDoneAt(ctx context.Context, doneFrom *time.Time, doneTo *time.Time) ([]*ent.Todo, error)
+	FetchTodosByIds(ctx context.Context, ids []int) ([]*ent.Todo, error)
 }
 
 type TodoRepository struct {
@@ -164,6 +165,18 @@ func (r *TodoRepository) FetchTodosByDoneAt(ctx context.Context, doneFrom *time.
 
 	return query.
 		Order(ent.Desc(todo.FieldDoneAt), ent.Desc(todo.FieldID)).
+		All(ctx)
+}
+
+func (r *TodoRepository) FetchTodosByIds(ctx context.Context, ids []int) ([]*ent.Todo, error) {
+	u, err := r.base.getUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	client := r.base.getClient(ctx)
+	return client.Todo.Query().
+		Where(todo.HasUserWith(user.ID(u.ID))).
+		Where(todo.IDIn(ids...)).
 		All(ctx)
 }
 

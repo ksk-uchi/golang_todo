@@ -11,6 +11,7 @@ import (
 	"todo-app/repositories"
 	"todo-app/routes"
 	"todo-app/services"
+	"todo-app/utils"
 
 	"github.com/google/wire"
 	"github.com/labstack/echo/v5"
@@ -64,11 +65,12 @@ func InitializeApp() (*App, func(), error) {
 		todoSet,
 		authSet,
 		appSet,
+		utils.NewAIFactory,
 	)
 	return &App{}, nil, nil
 }
 
-func InitializeTestApp(e *echo.Echo, client *ent.Client) (*App, error) {
+func InitializeTestApp(e *echo.Echo, client *ent.Client, aiFactory utils.IAIFactory) (*App, error) {
 	wire.Build(
 		todoSet,
 		authSet,

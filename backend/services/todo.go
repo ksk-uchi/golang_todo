@@ -102,6 +102,10 @@ func (s *TodoService) DeleteTodo(ctx context.Context, id int) error {
 	return s.repo.DeleteTodo(ctx, id)
 }
 
+func (s *TodoService) FetchTodosByIds(ctx context.Context, ids []int) ([]*ent.Todo, error) {
+	return s.repo.FetchTodosByIds(ctx, ids)
+}
+
 func (s *TodoService) UpdateDoneStatus(ctx context.Context, id int, isDone bool) (*ent.Todo, error) {
 	txCtx, tx, err := utils.WithTx(ctx, s.client)
 	if err != nil {

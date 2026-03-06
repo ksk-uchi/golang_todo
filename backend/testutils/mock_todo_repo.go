@@ -77,3 +77,11 @@ func (m *MockTodoRepository) FetchTodosByDoneAt(ctx context.Context, doneFrom *t
 	}
 	return args.Get(0).([]*ent.Todo), args.Error(1)
 }
+
+func (m *MockTodoRepository) FetchTodosByIds(ctx context.Context, ids []int) ([]*ent.Todo, error) {
+	args := m.Called(ctx, ids)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*ent.Todo), args.Error(1)
+}

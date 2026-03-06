@@ -187,3 +187,28 @@ func TestTodoService_DeleteTodo(t *testing.T) {
 		assert.Equal(t, "db error", err.Error())
 	})
 }
+
+func TestTodoService_FetchTodosByIds(t *testing.T) {
+	client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&cache=shared&_fk=1")
+	defer func() {
+		if err := client.Close(); err != nil {
+			t.Errorf("failed to close client: %v", err)
+		}
+	}()
+
+	t.Run("リポジトリの FetchTodosByIds を呼び出し、結果を返すこと", func(t *testing.T) {
+		repo := new(testutils.MockTodoRepository)
+		ids := []int{1, 2, 3}
+		expectedTodos := []*ent.Todo{{ID: 1}, {ID: 2}, {ID: 3}}
+		repo.On("FetchTodosByIds", mock.Anything, ids).Return(expectedTodos, nil)
+
+		ctx := context.Background()
+		service := services.NewTodoService(client, slog.New(slog.NewTextHandler(io.Discard, nil)), repo)
+
+		result, err := service.FetchTodosByIds(ctx, ids)
+
+		assert.NoError(t, err)
+		assert.Equal(t, expectedTodos, result)
+		repo.AssertExpectations(t)
+	})
+}

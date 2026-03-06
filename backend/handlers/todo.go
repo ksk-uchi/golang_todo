@@ -11,6 +11,7 @@ import (
 	"todo-app/utils"
 	"todo-app/validators"
 
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v5"
 )
 
@@ -18,13 +19,17 @@ type TodoHandler struct {
 	logger               *slog.Logger
 	service              *services.TodoService
 	filterHistoryService services.ITodoFilterHistoryService
+	aiService            *services.AIService
+	aiFactory            utils.IAIFactory
 }
 
-func NewTodoHandler(logger *slog.Logger, service *services.TodoService, filterHistoryService services.ITodoFilterHistoryService) *TodoHandler {
+func NewTodoHandler(logger *slog.Logger, service *services.TodoService, filterHistoryService services.ITodoFilterHistoryService, aiService *services.AIService, aiFactory utils.IAIFactory) *TodoHandler {
 	return &TodoHandler{
 		logger:               logger,
 		service:              service,
 		filterHistoryService: filterHistoryService,
+		aiService:            aiService,
+		aiFactory:            aiFactory,
 	}
 }
 
@@ -39,6 +44,86 @@ func (h *TodoHandler) ListTodoFilterHistories(c *echo.Context) error {
 
 	res := dto.ListTodoFilterHistoriesResponseDto{
 		Queries: dto.EntitiesToTodoFilterHistoryQueryDtos(histories),
+	}
+
+	return c.JSON(http.StatusOK, res)
+}
+
+func (h *TodoHandler) FilterTodosByQuery(c *echo.Context) error {
+	utils.LogRequest(h.logger, c)
+
+	query := c.QueryParam("query")
+	ctx := c.Request().Context()
+
+	aiClient, err := h.aiFactory.GetGeminiClient(ctx)
+	if err != nil {
+		return utils.HandleError(h.logger, c, err, http.StatusInternalServerError)
+	}
+
+	aiDto, err := h.aiService.DecideFilterTodosFunction(ctx, aiClient, query)
+	if err != nil {
+		return utils.HandleError(h.logger, c, err, http.StatusInternalServerError)
+	}
+
+	var todos []*ent.Todo
+	var functionName *string
+	var args map[string]interface{}
+
+	if aiDto != nil {
+		functionName = &aiDto.FunctionName
+		args = aiDto.Args
+		todos, err = h.aiService.FilterTodos(ctx, aiDto.FunctionName, aiDto.Args)
+		if err != nil {
+			return utils.HandleError(h.logger, c, err, http.StatusInternalServerError)
+		}
+	} else {
+		todos = []*ent.Todo{}
+	}
+
+	todoIds := make([]int, len(todos))
+	for i, t := range todos {
+		todoIds[i] = t.ID
+	}
+
+	_, err = h.filterHistoryService.SaveFilterHistory(ctx, query, functionName, args, todoIds)
+	if err != nil {
+		return utils.HandleError(h.logger, c, err, http.StatusInternalServerError)
+	}
+
+	res := make([]dto.TodoDto, len(todos))
+	for i, t := range todos {
+		res[i] = dto.EntityToTodoDto(t)
+	}
+
+	return c.JSON(http.StatusOK, res)
+}
+
+func (h *TodoHandler) FilterTodosByQueryID(c *echo.Context) error {
+	utils.LogRequest(h.logger, c)
+
+	queryIDStr := c.QueryParam("query_id")
+	queryID, err := uuid.Parse(queryIDStr)
+	if err != nil {
+		return utils.HandleError(h.logger, c, err, http.StatusBadRequest)
+	}
+
+	ctx := c.Request().Context()
+	history, err := h.filterHistoryService.GetFilterHistoryByQueryID(ctx, queryID)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return utils.HandleError(h.logger, c, err, http.StatusNotFound)
+		}
+		return utils.HandleError(h.logger, c, err, http.StatusInternalServerError)
+	}
+
+	todos, err := h.service.FetchTodosByIds(ctx, history.ResultTodoIds)
+	if err != nil {
+		return utils.HandleError(h.logger, c, err, http.StatusInternalServerError)
+	}
+
+	res := make([]dto.TodoDto, len(todos))
+	for i, t := range todos {
+		res[i] = dto.EntityToTodoDto(t)
 	}
 
 	return c.JSON(http.StatusOK, res)
