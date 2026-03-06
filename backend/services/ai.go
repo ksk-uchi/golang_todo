@@ -3,7 +3,6 @@ package services
 import (
 	"context"
 	"fmt"
-	"os"
 	"time"
 	"todo-app/dto"
 	"todo-app/ent"
@@ -17,44 +16,6 @@ type IGenAIClient interface {
 	GenerateContent(ctx context.Context, model string, contents []*genai.Content, config *genai.GenerateContentConfig) (*genai.GenerateContentResponse, error)
 }
 
-type genAIClientWrapper struct {
-	client *genai.Client
-}
-
-func (w *genAIClientWrapper) GenerateContent(ctx context.Context, model string, contents []*genai.Content, config *genai.GenerateContentConfig) (*genai.GenerateContentResponse, error) {
-	return w.client.Models.GenerateContent(ctx, model, contents, config)
-}
-
-// CreateAIClient creates a new GenAI client wrapper that implements IGenAIClient
-func CreateAIClient(ctx context.Context) (IGenAIClient, error) {
-	apiKey := os.Getenv("GOOGLE_API_KEY")
-	if apiKey == "" {
-		return nil, fmt.Errorf("GOOGLE_API_KEY is not set")
-	}
-	client, err := genai.NewClient(ctx, &genai.ClientConfig{
-		APIKey:  apiKey,
-		Backend: genai.BackendGeminiAPI,
-	})
-	if err != nil {
-		return nil, err
-	}
-	return &genAIClientWrapper{client: client}, nil
-}
-
-// var used to override in tests
-var createAIClientFunc = CreateAIClient
-
-// SetCreateAIClientFunc sets the function used to create the AI client.
-// This is used for testing.
-func SetCreateAIClientFunc(f func(ctx context.Context) (IGenAIClient, error)) {
-	createAIClientFunc = f
-}
-
-// ResetCreateAIClientFunc resets the function used to create the AI client to the default.
-func ResetCreateAIClientFunc() {
-	createAIClientFunc = CreateAIClient
-}
-
 type AIService struct {
 	repo repositories.ITodoRepository
 }
@@ -63,19 +24,14 @@ func NewAIService(repo repositories.ITodoRepository) *AIService {
 	return &AIService{repo: repo}
 }
 
-func (s *AIService) DecideFilterTodosFunction(ctx context.Context, query string) (*dto.AIFilterDto, error) {
-	client, err := createAIClientFunc(ctx)
-	if err != nil {
-		return nil, err
-	}
-
+func (s *AIService) DecideFilterTodosFunction(ctx context.Context, aiClient IGenAIClient, query string) (*dto.AIFilterDto, error) {
 	parts := []*genai.Part{
 		{Text: time.Now().Format("現在2006年1月2日15:04:05です。")},
 		{Text: "使用できる Tool が無い場合は「対応できる Tool がありません」とだけ回答するようにしてください。"},
 		{Text: query},
 	}
 
-	result, err := client.GenerateContent(ctx,
+	result, err := aiClient.GenerateContent(ctx,
 		"gemini-3-flash-preview",
 		[]*genai.Content{{Parts: parts}},
 		&genai.GenerateContentConfig{

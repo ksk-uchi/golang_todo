@@ -25,14 +25,7 @@ func (m *MockGenAIClient) GenerateContent(ctx context.Context, model string, con
 }
 
 func TestDecideFilterTodosFunction(t *testing.T) {
-	oldCreateAIClientFunc := createAIClientFunc
-	defer func() { createAIClientFunc = oldCreateAIClientFunc }()
-
 	mockClient := new(MockGenAIClient)
-	createAIClientFunc = func(ctx context.Context) (IGenAIClient, error) {
-		return mockClient, nil
-	}
-
 	repo := new(testutils.MockTodoRepository)
 	s := NewAIService(repo)
 	ctx := context.Background()
@@ -59,7 +52,7 @@ func TestDecideFilterTodosFunction(t *testing.T) {
 		}
 		mockClient.On("GenerateContent", ctx, "gemini-3-flash-preview", mock.Anything, mock.Anything).Return(expectedResponse, nil).Once()
 
-		res, err := s.DecideFilterTodosFunction(ctx, "last month")
+		res, err := s.DecideFilterTodosFunction(ctx, mockClient, "last month")
 		assert.NoError(t, err)
 		assert.NotNil(t, res)
 		assert.Equal(t, "ListTodosByDoneAt", res.FunctionName)
@@ -82,7 +75,7 @@ func TestDecideFilterTodosFunction(t *testing.T) {
 		}
 		mockClient.On("GenerateContent", ctx, "gemini-3-flash-preview", mock.Anything, mock.Anything).Return(expectedResponse, nil).Once()
 
-		res, err := s.DecideFilterTodosFunction(ctx, "hello")
+		res, err := s.DecideFilterTodosFunction(ctx, mockClient, "hello")
 		assert.NoError(t, err)
 		assert.Nil(t, res)
 	})
