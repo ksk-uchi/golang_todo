@@ -9,6 +9,7 @@ import (
 
 type ITodoFilterHistoryRepository interface {
 	FetchLatestFilters(ctx context.Context, limit int) ([]*ent.TodoFilterHistory, error)
+	SaveFilterHistory(ctx context.Context, query string, functionName *string, args map[string]interface{}, resultTodoIds []int) (*ent.TodoFilterHistory, error)
 }
 
 type TodoFilterHistoryRepository struct {
@@ -32,4 +33,20 @@ func (r *TodoFilterHistoryRepository) FetchLatestFilters(ctx context.Context, li
 		Order(ent.Desc(todofilterhistory.FieldCreatedAt)).
 		Limit(limit).
 		All(ctx)
+}
+
+func (r *TodoFilterHistoryRepository) SaveFilterHistory(ctx context.Context, query string, functionName *string, args map[string]interface{}, resultTodoIds []int) (*ent.TodoFilterHistory, error) {
+	u, err := r.base.getUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	client := r.base.getClient(ctx)
+	create := client.TodoFilterHistory.Create().
+		SetUserID(u.ID).
+		SetQuery(query).
+		SetNillableFunctionName(functionName).
+		SetArgs(args).
+		SetResultTodoIds(resultTodoIds)
+
+	return create.Save(ctx)
 }

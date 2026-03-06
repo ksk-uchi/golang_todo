@@ -18,3 +18,11 @@ func (m *MockTodoFilterHistoryRepository) FetchLatestFilters(ctx context.Context
 	}
 	return args.Get(0).([]*ent.TodoFilterHistory), args.Error(1)
 }
+
+func (m *MockTodoFilterHistoryRepository) SaveFilterHistory(ctx context.Context, query string, functionName *string, args map[string]interface{}, resultTodoIds []int) (*ent.TodoFilterHistory, error) {
+	callArgs := m.Called(ctx, query, functionName, args, resultTodoIds)
+	if callArgs.Get(0) == nil {
+		return nil, callArgs.Error(1)
+	}
+	return callArgs.Get(0).(*ent.TodoFilterHistory), callArgs.Error(1)
+}
