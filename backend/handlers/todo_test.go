@@ -14,6 +14,7 @@ import (
 	"todo-app/services"
 
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v5"
 	_ "github.com/mattn/go-sqlite3" // テスト実行にドライバが必要
 	"github.com/stretchr/testify/assert"
@@ -581,5 +582,72 @@ func TestTodoHandler_FilterTodosByQuery_Integration(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, "done on March 1st", history.Query)
 		assert.Equal(t, "ListTodosByDoneAt", history.FunctionName)
+	})
+}
+
+func TestTodoHandler_FilterTodosByQueryID_Integration(t *testing.T) {
+	t.Run("履歴IDによるToDo取得の成功", func(t *testing.T) {
+		cleanupDatabase(t)
+		e := echo.New()
+		app, err := di.InitializeTestApp(e, testClient)
+		assert.NoError(t, err)
+		app.Router.Setup(e)
+
+		user := testClient.User.Create().SetName("test").SetEmail("test").SetPassword("test").SaveX(context.Background())
+
+		// ToDo を作成
+		todo1 := testClient.Todo.Create().
+			SetTitle("Todo 1").
+			SetDescription("Desc 1").
+			SetUser(user).
+			SaveX(context.Background())
+
+		// 履歴を作成
+		history := testClient.TodoFilterHistory.Create().
+			SetQuery("my query").
+			SetUserID(user.ID).
+			SetResultTodoIds([]int{todo1.ID}).
+			SaveX(context.Background())
+
+		req, rec := createAuthenticatedRequest(t, http.MethodGet, fmt.Sprintf("/todo/filter_by_query_id?query_id=%s", history.ID.String()), "", user.ID)
+		e.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+
+		var res []dto.TodoDto
+		err = json.Unmarshal(rec.Body.Bytes(), &res)
+		assert.NoError(t, err)
+		assert.Len(t, res, 1)
+		assert.Equal(t, "Todo 1", res[0].Title)
+	})
+
+	t.Run("不正なUUIDフォーマット", func(t *testing.T) {
+		cleanupDatabase(t)
+		e := echo.New()
+		app, err := di.InitializeTestApp(e, testClient)
+		assert.NoError(t, err)
+		app.Router.Setup(e)
+
+		user := testClient.User.Create().SetName("test").SetEmail("test").SetPassword("test").SaveX(context.Background())
+
+		req, rec := createAuthenticatedRequest(t, http.MethodGet, "/todo/filter_by_query_id?query_id=invalid-uuid", "", user.ID)
+		e.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+	})
+
+	t.Run("履歴が見つからない場合", func(t *testing.T) {
+		cleanupDatabase(t)
+		e := echo.New()
+		app, err := di.InitializeTestApp(e, testClient)
+		assert.NoError(t, err)
+		app.Router.Setup(e)
+
+		user := testClient.User.Create().SetName("test").SetEmail("test").SetPassword("test").SaveX(context.Background())
+
+		req, rec := createAuthenticatedRequest(t, http.MethodGet, fmt.Sprintf("/todo/filter_by_query_id?query_id=%s", uuid.New().String()), "", user.ID)
+		e.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusNotFound, rec.Code)
 	})
 }
