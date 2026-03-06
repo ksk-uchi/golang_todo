@@ -11,7 +11,6 @@ import (
 	"todo-app/di"
 	"todo-app/dto"
 	"todo-app/ent/todo"
-	"todo-app/services"
 	"todo-app/utils"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -525,12 +524,12 @@ type mockAIFactory struct {
 	mock.Mock
 }
 
-func (m *mockAIFactory) GetGeminiClient(ctx context.Context) (services.IGenAIClient, error) {
+func (m *mockAIFactory) GetGeminiClient(ctx context.Context) (utils.IGenAIClient, error) {
 	args := m.Called(ctx)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(services.IGenAIClient), args.Error(1)
+	return args.Get(0).(utils.IGenAIClient), args.Error(1)
 }
 
 func TestTodoHandler_FilterTodosByQuery_Integration(t *testing.T) {

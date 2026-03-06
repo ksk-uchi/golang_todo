@@ -5,17 +5,20 @@ import (
 	"fmt"
 	"os"
 	"sync"
-	"todo-app/services"
 
 	"google.golang.org/genai"
 )
 
+type IGenAIClient interface {
+	GenerateContent(ctx context.Context, model string, contents []*genai.Content, config *genai.GenerateContentConfig) (*genai.GenerateContentResponse, error)
+}
+
 type IAIFactory interface {
-	GetGeminiClient(ctx context.Context) (services.IGenAIClient, error)
+	GetGeminiClient(ctx context.Context) (IGenAIClient, error)
 }
 
 type AIFactory struct {
-	geminiClient services.IGenAIClient
+	geminiClient IGenAIClient
 	geminiOnce   sync.Once
 	geminiErr    error
 }
@@ -29,12 +32,12 @@ type genAIClientWrapper struct {
 	client *genai.Client
 }
 
-// GenerateContent implements services.IGenAIClient
+// GenerateContent implements IGenAIClient
 func (w *genAIClientWrapper) GenerateContent(ctx context.Context, model string, contents []*genai.Content, config *genai.GenerateContentConfig) (*genai.GenerateContentResponse, error) {
 	return w.client.Models.GenerateContent(ctx, model, contents, config)
 }
 
-func (f *AIFactory) GetGeminiClient(ctx context.Context) (services.IGenAIClient, error) {
+func (f *AIFactory) GetGeminiClient(ctx context.Context) (IGenAIClient, error) {
 	f.geminiOnce.Do(func() {
 		apiKey := os.Getenv("GOOGLE_API_KEY")
 		if apiKey == "" {

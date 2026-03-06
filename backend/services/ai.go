@@ -8,13 +8,10 @@ import (
 	"todo-app/ent"
 	function_declerations "todo-app/function_declarations"
 	"todo-app/repositories"
+	"todo-app/utils"
 
 	"google.golang.org/genai"
 )
-
-type IGenAIClient interface {
-	GenerateContent(ctx context.Context, model string, contents []*genai.Content, config *genai.GenerateContentConfig) (*genai.GenerateContentResponse, error)
-}
 
 type AIService struct {
 	repo repositories.ITodoRepository
@@ -24,7 +21,7 @@ func NewAIService(repo repositories.ITodoRepository) *AIService {
 	return &AIService{repo: repo}
 }
 
-func (s *AIService) DecideFilterTodosFunction(ctx context.Context, aiClient IGenAIClient, query string) (*dto.AIFilterDto, error) {
+func (s *AIService) DecideFilterTodosFunction(ctx context.Context, aiClient utils.IGenAIClient, query string) (*dto.AIFilterDto, error) {
 	parts := []*genai.Part{
 		{Text: time.Now().Format("現在2006年1月2日15:04:05です。")},
 		{Text: "使用できる Tool が無い場合は「対応できる Tool がありません」とだけ回答するようにしてください。"},
