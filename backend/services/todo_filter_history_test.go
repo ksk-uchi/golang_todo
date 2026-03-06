@@ -9,9 +9,45 @@ import (
 	"todo-app/services"
 	"todo-app/testutils"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
+
+// ...
+
+func TestTodoFilterHistoryService_GetFilterHistoryByQueryID(t *testing.T) {
+	t.Run("リポジトリの GetFilterHistoryByQueryID を呼び出し、結果を返すこと", func(t *testing.T) {
+		repo := new(testutils.MockTodoFilterHistoryRepository)
+		queryID := uuid.New()
+		expectedHistory := &ent.TodoFilterHistory{ID: queryID, Query: "test"}
+		repo.On("GetFilterHistoryByQueryID", mock.Anything, queryID).Return(expectedHistory, nil)
+
+		logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+		service := services.NewTodoFilterHistoryService(repo, logger)
+
+		result, err := service.GetFilterHistoryByQueryID(context.Background(), queryID)
+
+		assert.NoError(t, err)
+		assert.Equal(t, expectedHistory, result)
+		repo.AssertExpectations(t)
+	})
+
+	t.Run("リポジトリがエラーを返した場合、そのままエラーを返すこと", func(t *testing.T) {
+		repo := new(testutils.MockTodoFilterHistoryRepository)
+		queryID := uuid.New()
+		repo.On("GetFilterHistoryByQueryID", mock.Anything, queryID).Return((*ent.TodoFilterHistory)(nil), assert.AnError)
+
+		logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+		service := services.NewTodoFilterHistoryService(repo, logger)
+
+		result, err := service.GetFilterHistoryByQueryID(context.Background(), queryID)
+
+		assert.Error(t, err)
+		assert.Nil(t, result)
+		repo.AssertExpectations(t)
+	})
+}
 
 func TestTodoFilterHistoryService_FetchLatestFilters(t *testing.T) {
 	t.Run("リポジトリを呼び出し、最新5件の履歴を返すこと", func(t *testing.T) {
