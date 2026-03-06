@@ -7,19 +7,8 @@ import (
 	"todo-app/dto"
 	"todo-app/ent"
 	"todo-app/repositories"
+	"todo-app/utils"
 )
-
-// WithTx creates a new transaction and returns a new context with the transaction attached.
-// It uses ent.NewTxContext to attach the transaction to the context.
-func WithTx(ctx context.Context, client *ent.Client) (context.Context, *ent.Tx, error) {
-	tx, err := client.Tx(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
-	// ent.NewTxContext attaches the transaction to the context,
-	// allowing ent.TxFromContext to retrieve it.
-	return ent.NewTxContext(ctx, tx), tx, nil
-}
 
 func NewTodoService(client *ent.Client, logger *slog.Logger, repo repositories.ITodoRepository) *TodoService {
 	return &TodoService{
@@ -85,7 +74,7 @@ func (s *TodoService) UpdateTodo(ctx context.Context, id int, title *string, des
 		return nil, app_errors.ErrTodoAlreadyDone
 	}
 
-	txCtx, tx, err := WithTx(ctx, s.client)
+	txCtx, tx, err := utils.WithTx(ctx, s.client)
 	if err != nil {
 		return nil, err
 	}
@@ -118,7 +107,7 @@ func (s *TodoService) FetchTodosByIds(ctx context.Context, ids []int) ([]*ent.To
 }
 
 func (s *TodoService) UpdateDoneStatus(ctx context.Context, id int, isDone bool) (*ent.Todo, error) {
-	txCtx, tx, err := WithTx(ctx, s.client)
+	txCtx, tx, err := utils.WithTx(ctx, s.client)
 	if err != nil {
 		return nil, err
 	}
