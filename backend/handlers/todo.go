@@ -20,14 +20,16 @@ type TodoHandler struct {
 	service              *services.TodoService
 	filterHistoryService services.ITodoFilterHistoryService
 	aiService            *services.AIService
+	aiFactory            utils.IAIFactory
 }
 
-func NewTodoHandler(logger *slog.Logger, service *services.TodoService, filterHistoryService services.ITodoFilterHistoryService, aiService *services.AIService) *TodoHandler {
+func NewTodoHandler(logger *slog.Logger, service *services.TodoService, filterHistoryService services.ITodoFilterHistoryService, aiService *services.AIService, aiFactory utils.IAIFactory) *TodoHandler {
 	return &TodoHandler{
 		logger:               logger,
 		service:              service,
 		filterHistoryService: filterHistoryService,
 		aiService:            aiService,
+		aiFactory:            aiFactory,
 	}
 }
 
@@ -53,7 +55,12 @@ func (h *TodoHandler) FilterTodosByQuery(c *echo.Context) error {
 	query := c.QueryParam("query")
 	ctx := c.Request().Context()
 
-	aiDto, err := h.aiService.DecideFilterTodosFunction(ctx, query)
+	aiClient, err := h.aiFactory.GetGeminiClient(ctx)
+	if err != nil {
+		return utils.HandleError(h.logger, c, err, http.StatusInternalServerError)
+	}
+
+	aiDto, err := h.aiService.DecideFilterTodosFunction(ctx, aiClient, query)
 	if err != nil {
 		return utils.HandleError(h.logger, c, err, http.StatusInternalServerError)
 	}

@@ -12,6 +12,7 @@ import (
 	"todo-app/dto"
 	"todo-app/ent/todo"
 	"todo-app/services"
+	"todo-app/utils"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/google/uuid"
@@ -26,7 +27,7 @@ func TestTodoHandler_ListTodo_Integration(t *testing.T) {
 	t.Run("Todo 一覧取得", func(t *testing.T) {
 		cleanupDatabase(t)
 		e := echo.New()
-		app, err := di.InitializeTestApp(e, testClient)
+		app, err := di.InitializeTestApp(e, testClient, utils.NewAIFactory())
 		assert.NoError(t, err)
 
 		app.Router.Setup(e)
@@ -90,7 +91,7 @@ func TestTodoHandler_ListTodo_Integration(t *testing.T) {
 func TestTodoHandler_ListTodo_IncludeDone_Integration(t *testing.T) {
 	cleanupDatabase(t)
 	e := echo.New()
-	app, err := di.InitializeTestApp(e, testClient)
+	app, err := di.InitializeTestApp(e, testClient, utils.NewAIFactory())
 	assert.NoError(t, err)
 
 	app.Router.Setup(e)
@@ -157,7 +158,7 @@ func TestTodoHandler_CreateTodo_Integration(t *testing.T) {
 	t.Run("Todo 新規作成", func(t *testing.T) {
 		cleanupDatabase(t)
 		e := echo.New()
-		app, err := di.InitializeTestApp(e, testClient)
+		app, err := di.InitializeTestApp(e, testClient, utils.NewAIFactory())
 		assert.NoError(t, err)
 
 		app.Router.Setup(e)
@@ -184,7 +185,7 @@ func TestTodoHandler_CreateTodo_Integration(t *testing.T) {
 	t.Run("Todo 新規作成 バリデーションエラー", func(t *testing.T) {
 		cleanupDatabase(t)
 		e := echo.New()
-		app, err := di.InitializeTestApp(e, testClient)
+		app, err := di.InitializeTestApp(e, testClient, utils.NewAIFactory())
 		assert.NoError(t, err)
 
 		app.Router.Setup(e)
@@ -204,7 +205,7 @@ func TestTodoHandler_CreateTodo_Integration(t *testing.T) {
 	t.Run("Todo 新規作成 未認証", func(t *testing.T) {
 		cleanupDatabase(t)
 		e := echo.New()
-		app, err := di.InitializeTestApp(e, testClient)
+		app, err := di.InitializeTestApp(e, testClient, utils.NewAIFactory())
 		assert.NoError(t, err)
 
 		app.Router.Setup(e)
@@ -227,7 +228,7 @@ func TestTodoHandler_UpdateTodo_Integration(t *testing.T) {
 	t.Run("Todo 更新", func(t *testing.T) {
 		cleanupDatabase(t)
 		e := echo.New()
-		app, err := di.InitializeTestApp(e, testClient)
+		app, err := di.InitializeTestApp(e, testClient, utils.NewAIFactory())
 		assert.NoError(t, err)
 
 		app.Router.Setup(e)
@@ -261,7 +262,7 @@ func TestTodoHandler_UpdateTodo_Integration(t *testing.T) {
 	t.Run("Todo 更新 存在しないID", func(t *testing.T) {
 		cleanupDatabase(t)
 		e := echo.New()
-		app, err := di.InitializeTestApp(e, testClient)
+		app, err := di.InitializeTestApp(e, testClient, utils.NewAIFactory())
 		assert.NoError(t, err)
 
 		app.Router.Setup(e)
@@ -278,7 +279,7 @@ func TestTodoHandler_UpdateTodo_Integration(t *testing.T) {
 	t.Run("Todo 更新 他人のTodo", func(t *testing.T) {
 		cleanupDatabase(t)
 		e := echo.New()
-		app, err := di.InitializeTestApp(e, testClient)
+		app, err := di.InitializeTestApp(e, testClient, utils.NewAIFactory())
 		assert.NoError(t, err)
 
 		app.Router.Setup(e)
@@ -303,7 +304,7 @@ func TestTodoHandler_UpdateTodo_Integration(t *testing.T) {
 	t.Run("Todo 更新 完了済み", func(t *testing.T) {
 		cleanupDatabase(t)
 		e := echo.New()
-		app, err := di.InitializeTestApp(e, testClient)
+		app, err := di.InitializeTestApp(e, testClient, utils.NewAIFactory())
 		assert.NoError(t, err)
 
 		app.Router.Setup(e)
@@ -330,7 +331,7 @@ func TestTodoHandler_ListTodoFilterHistories_Integration(t *testing.T) {
 	t.Run("検索履歴の取得", func(t *testing.T) {
 		cleanupDatabase(t)
 		e := echo.New()
-		app, err := di.InitializeTestApp(e, testClient)
+		app, err := di.InitializeTestApp(e, testClient, utils.NewAIFactory())
 		assert.NoError(t, err)
 
 		app.Router.Setup(e)
@@ -366,7 +367,7 @@ func TestTodoHandler_DeleteTodo_Integration(t *testing.T) {
 	t.Run("Todo 削除", func(t *testing.T) {
 		cleanupDatabase(t)
 		e := echo.New()
-		app, err := di.InitializeTestApp(e, testClient)
+		app, err := di.InitializeTestApp(e, testClient, utils.NewAIFactory())
 		assert.NoError(t, err)
 
 		app.Router.Setup(e)
@@ -392,7 +393,7 @@ func TestTodoHandler_DeleteTodo_Integration(t *testing.T) {
 	t.Run("Todo 削除 存在しないID", func(t *testing.T) {
 		cleanupDatabase(t)
 		e := echo.New()
-		app, err := di.InitializeTestApp(e, testClient)
+		app, err := di.InitializeTestApp(e, testClient, utils.NewAIFactory())
 		assert.NoError(t, err)
 
 		app.Router.Setup(e)
@@ -407,7 +408,7 @@ func TestTodoHandler_DeleteTodo_Integration(t *testing.T) {
 	t.Run("Todo 削除 他人のTodo", func(t *testing.T) {
 		cleanupDatabase(t)
 		e := echo.New()
-		app, err := di.InitializeTestApp(e, testClient)
+		app, err := di.InitializeTestApp(e, testClient, utils.NewAIFactory())
 		assert.NoError(t, err)
 
 		app.Router.Setup(e)
@@ -440,7 +441,7 @@ func TestTodoHandler_UpdateDoneStatus(t *testing.T) {
 	t.Run("成功時", func(t *testing.T) {
 		cleanupDatabase(t)
 		e := echo.New()
-		app, err := di.InitializeTestApp(e, testClient)
+		app, err := di.InitializeTestApp(e, testClient, utils.NewAIFactory())
 		assert.NoError(t, err)
 
 		app.Router.Setup(e)
@@ -469,7 +470,7 @@ func TestTodoHandler_UpdateDoneStatus(t *testing.T) {
 	t.Run("バリデーションエラー", func(t *testing.T) {
 		cleanupDatabase(t)
 		e := echo.New()
-		app, err := di.InitializeTestApp(e, testClient)
+		app, err := di.InitializeTestApp(e, testClient, utils.NewAIFactory())
 		assert.NoError(t, err)
 
 		app.Router.Setup(e)
@@ -492,7 +493,7 @@ func TestTodoHandler_UpdateDoneStatus(t *testing.T) {
 	t.Run("Todoが見つからない場合", func(t *testing.T) {
 		cleanupDatabase(t)
 		e := echo.New()
-		app, err := di.InitializeTestApp(e, testClient)
+		app, err := di.InitializeTestApp(e, testClient, utils.NewAIFactory())
 		assert.NoError(t, err)
 
 		app.Router.Setup(e)
@@ -520,13 +521,22 @@ func (m *mockGenAIClient) GenerateContent(ctx context.Context, model string, con
 	return args.Get(0).(*genai.GenerateContentResponse), args.Error(1)
 }
 
+type mockAIFactory struct {
+	mock.Mock
+}
+
+func (m *mockAIFactory) GetGeminiClient(ctx context.Context) (services.IGenAIClient, error) {
+	args := m.Called(ctx)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(services.IGenAIClient), args.Error(1)
+}
+
 func TestTodoHandler_FilterTodosByQuery_Integration(t *testing.T) {
 	t.Run("AIフィルタによるToDo取得と履歴保存の成功", func(t *testing.T) {
 		cleanupDatabase(t)
 		e := echo.New()
-		app, err := di.InitializeTestApp(e, testClient)
-		assert.NoError(t, err)
-		app.Router.Setup(e)
 
 		user := testClient.User.Create().SetName("test").SetEmail("test").SetPassword("test").SaveX(context.Background())
 
@@ -540,10 +550,12 @@ func TestTodoHandler_FilterTodosByQuery_Integration(t *testing.T) {
 
 		// GenAI クライアントをモック
 		mClient := new(mockGenAIClient)
-		services.SetCreateAIClientFunc(func(ctx context.Context) (services.IGenAIClient, error) {
-			return mClient, nil
-		})
-		defer services.ResetCreateAIClientFunc()
+		mFactory := new(mockAIFactory)
+		mFactory.On("GetGeminiClient", mock.Anything).Return(mClient, nil)
+
+		app, err := di.InitializeTestApp(e, testClient, mFactory)
+		assert.NoError(t, err)
+		app.Router.Setup(e)
 
 		expectedResponse := &genai.GenerateContentResponse{
 			Candidates: []*genai.Candidate{
@@ -589,7 +601,7 @@ func TestTodoHandler_FilterTodosByQueryID_Integration(t *testing.T) {
 	t.Run("履歴IDによるToDo取得の成功", func(t *testing.T) {
 		cleanupDatabase(t)
 		e := echo.New()
-		app, err := di.InitializeTestApp(e, testClient)
+		app, err := di.InitializeTestApp(e, testClient, utils.NewAIFactory())
 		assert.NoError(t, err)
 		app.Router.Setup(e)
 
@@ -624,7 +636,7 @@ func TestTodoHandler_FilterTodosByQueryID_Integration(t *testing.T) {
 	t.Run("不正なUUIDフォーマット", func(t *testing.T) {
 		cleanupDatabase(t)
 		e := echo.New()
-		app, err := di.InitializeTestApp(e, testClient)
+		app, err := di.InitializeTestApp(e, testClient, utils.NewAIFactory())
 		assert.NoError(t, err)
 		app.Router.Setup(e)
 
@@ -639,7 +651,7 @@ func TestTodoHandler_FilterTodosByQueryID_Integration(t *testing.T) {
 	t.Run("履歴が見つからない場合", func(t *testing.T) {
 		cleanupDatabase(t)
 		e := echo.New()
-		app, err := di.InitializeTestApp(e, testClient)
+		app, err := di.InitializeTestApp(e, testClient, utils.NewAIFactory())
 		assert.NoError(t, err)
 		app.Router.Setup(e)
 
