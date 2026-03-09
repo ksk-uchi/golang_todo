@@ -1,20 +1,40 @@
 "use client";
 
+import { AIFilterBar } from "@/components/todo/AIFilterBar";
 import { PaginationControl } from "@/components/todo/PaginationControl";
 import { TodoItem } from "@/components/todo/TodoItem";
 import { TodoModal } from "@/components/todo/TodoModal";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { useAIFilter } from "@/hooks/useAIFilter";
 import { useTodos } from "@/hooks/useTodos";
 import { Plus } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 
 function HomeContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const pageParam = searchParams.get("page");
+  const currentPage = pageParam ? parseInt(pageParam, 10) : 1;
+
+  const {
+    isFiltering,
+    activeFilter,
+    filterHistories,
+    handleAIFilter,
+    handleHistoryFilter,
+    clearFilter,
+  } = useAIFilter({
+    onFilterSuccess: (todos) => setTodos(todos),
+    onClear: () => fetchTodos(),
+  });
+
   const {
     todos,
+    setTodos,
+    fetchTodos,
     pagination,
     isLoading,
     error,
@@ -31,9 +51,9 @@ function HomeContent() {
     handleSave,
     handlePageChange,
     setIsModalOpen,
-  } = useTodos();
+  } = useTodos(activeFilter !== null);
 
-  if (isLoading) {
+  if (isLoading || isFiltering) {
     return (
       <div className="flex justify-center p-8">
         <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
@@ -69,6 +89,14 @@ function HomeContent() {
         </Label>
       </div>
 
+      <AIFilterBar
+        activeFilter={activeFilter}
+        filterHistories={filterHistories}
+        onSearchAIFilter={(query) => handleAIFilter(query, currentPage)}
+        onSearchHistory={(history) => handleHistoryFilter(history, currentPage)}
+        onClearFilter={clearFilter}
+      />
+
       {todos.length > 0 ? (
         todos.map((todo) => (
           <TodoItem
@@ -81,7 +109,9 @@ function HomeContent() {
         ))
       ) : (
         <div className="text-center text-muted-foreground p-8">
-          No todos found. Add one!
+          {activeFilter
+            ? "該当するToDoは見つかりませんでした。"
+            : "No todos found. Add one!"}
         </div>
       )}
 
@@ -105,7 +135,7 @@ function HomeContent() {
         isSaving={isSaving}
       />
 
-      {pagination && pagination.total_pages > 1 && (
+      {!activeFilter && pagination && pagination.total_pages > 1 && (
         <PaginationControl
           totalPages={pagination.total_pages}
           currentPage={pagination.current_page}
