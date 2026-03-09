@@ -19,3 +19,12 @@ export interface ListTodoResponse {
   data: Todo[];
   pagination: Pagination;
 }
+
+export interface TodoFilterHistoryQuery {
+  id: string;
+  query: string;
+}
+
+export interface ListTodoFilterHistoriesResponse {
+  queries: TodoFilterHistoryQuery[];
+}

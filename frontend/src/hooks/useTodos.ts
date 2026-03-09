@@ -4,9 +4,9 @@ import { api } from "@/lib/api";
 import { showToast } from "@/lib/toast";
 import { ListTodoResponse, Todo } from "@/types";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
-export function useTodos() {
+export function useTodos(skipFetch: boolean = false) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const pageParam = searchParams.get("page");
@@ -24,28 +24,30 @@ export function useTodos() {
   const [modalKey, setModalKey] = useState(0);
   const [hideDone, setHideDone] = useState(true);
 
-  useEffect(() => {
-    const fetchTodos = async () => {
-      setIsLoading(true);
-      try {
-        const res = await api.get<ListTodoResponse>("/todo", {
-          params: { page: currentPage, include_done: !hideDone },
-        });
-        if (res.data.data.length === 0 && currentPage > 1) {
-          router.push(`/?page=${res.data.pagination.total_pages}`);
-          return;
-        }
-        setTodos(res.data.data);
-        setPagination(res.data.pagination);
-        setError(null);
-      } catch (err) {
-        setError(err as Error);
-      } finally {
-        setIsLoading(false);
+  const fetchTodos = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const res = await api.get<ListTodoResponse>("/todo", {
+        params: { page: currentPage, include_done: !hideDone },
+      });
+      if (res.data.data.length === 0 && currentPage > 1) {
+        router.push(`/?page=${res.data.pagination.total_pages}`);
+        return;
       }
-    };
-    fetchTodos();
+      setTodos(res.data.data);
+      setPagination(res.data.pagination);
+      setError(null);
+    } catch (err) {
+      setError(err as Error);
+    } finally {
+      setIsLoading(false);
+    }
   }, [currentPage, router, hideDone]);
+
+  useEffect(() => {
+    if (skipFetch) return;
+    fetchTodos();
+  }, [skipFetch, fetchTodos]);
 
   const handleToggleDone = async (id: number, isDone: boolean) => {
     try {
@@ -178,6 +180,8 @@ export function useTodos() {
 
   return {
     todos,
+    setTodos,
+    fetchTodos,
     pagination,
     isLoading,
     error,
