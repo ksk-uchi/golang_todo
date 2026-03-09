@@ -49,7 +49,7 @@ export function useAIFilter({ onFilterSuccess, onClear }: UseAIFilterProps) {
     async (query: string, currentPage: number) => {
       const validation = aiFilterSchema.safeParse(query);
       if (!validation.success) {
-        showToast(validation.error.errors[0].message, "error");
+        showToast(validation.error.issues[0].message, "error");
         return;
       }
 
