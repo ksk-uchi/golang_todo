@@ -54,7 +54,7 @@ export function AIFilterBar({
                   strokeWidth={1}
                 />
                 <Input
-                  className="pl-10 pr-10 border-blue-200 focus-visible:ring-blue-500 rounded-full h-13"
+                  className="pl-10 pr-10 border-blue-200 focus-visible:ring-blue-500 rounded-full h-13 md:text-lg"
                   placeholder="AIに頼んでタスクを絞り込む... (例: 「直近一週間以内に完了になったもの」)"
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
@@ -104,11 +104,15 @@ export function AIFilterBar({
 
       {activeFilter && (
         <Badge
-          variant="secondary"
+          variant="outline"
           className="px-3 py-1 flex w-fit items-center gap-2 animate-in fade-in slide-in-from-top-1"
         >
           <span className="flex items-center">
-            <Sparkles className="w-5 h-5 text-blue-500" fill="currentColor" />
+            <Sparkles
+              className="w-5 h-5 text-blue-200"
+              fill="currentColor"
+              strokeWidth={1}
+            />
           </span>
           <span className="text-sm">AI抽出: {activeFilter.query}</span>
           <button
