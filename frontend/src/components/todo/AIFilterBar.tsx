@@ -43,14 +43,18 @@ export function AIFilterBar({
   return (
     <div className="space-y-4">
       <div className="relative group">
-        <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
-        <div className="relative bg-background rounded-lg">
+        <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200 leading-13"></div>
+        <div className="relative bg-background rounded-full leading-13">
           <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
             <PopoverTrigger asChild>
               <div className="relative">
-                <Sparkles className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-500" />
+                <Sparkles
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-6 h-6 text-blue-200"
+                  fill="var(--color-blue-200)"
+                  strokeWidth={1}
+                />
                 <Input
-                  className="pl-10 pr-10 border-blue-200 focus-visible:ring-blue-500"
+                  className="pl-10 pr-10 border-blue-200 focus-visible:ring-blue-500 rounded-full h-13"
                   placeholder="AIに頼んでタスクを絞り込む... (例: 「直近一週間以内に完了になったもの」)"
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
@@ -59,9 +63,9 @@ export function AIFilterBar({
                 />
                 <button
                   onClick={handleSearch}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-blue-500 hover:text-blue-700 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-blue-200 hover:text-blue-200 transition-colors"
                 >
-                  <Search className="w-4 h-4" />
+                  <Search className="w-6 h-6" />
                 </button>
               </div>
             </PopoverTrigger>
