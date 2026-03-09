@@ -71,24 +71,6 @@ function HomeContent() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center space-x-2 pb-2">
-        <Checkbox
-          id="hide-done"
-          checked={hideDone}
-          onCheckedChange={(checked) => {
-            const isChecked = checked === true;
-            setHideDone(isChecked);
-            router.push("/?page=1");
-          }}
-        />
-        <Label
-          htmlFor="hide-done"
-          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-        >
-          完了したものを非表示にする
-        </Label>
-      </div>
-
       <AIFilterBar
         activeFilter={activeFilter}
         filterHistories={filterHistories}
@@ -96,6 +78,26 @@ function HomeContent() {
         onSearchHistory={(history) => handleHistoryFilter(history, currentPage)}
         onClearFilter={clearFilter}
       />
+
+      {!activeFilter && (
+        <div className="flex items-center space-x-2 pb-2">
+          <Checkbox
+            id="hide-done"
+            checked={hideDone}
+            onCheckedChange={(checked) => {
+              const isChecked = checked === true;
+              setHideDone(isChecked);
+              router.push("/?page=1");
+            }}
+          />
+          <Label
+            htmlFor="hide-done"
+            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+          >
+            完了したものを非表示にする
+          </Label>
+        </div>
+      )}
 
       {todos.length > 0 ? (
         todos.map((todo) => (
