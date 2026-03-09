@@ -4,8 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
   Popover,
+  PopoverAnchor,
   PopoverContent,
-  PopoverTrigger,
 } from "@/components/ui/popover";
 import { TodoFilterHistoryQuery } from "@/types";
 import { History, Search, Sparkles, X } from "lucide-react";
@@ -46,7 +46,7 @@ export function AIFilterBar({
         <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200 leading-13"></div>
         <div className="relative bg-background rounded-full leading-13">
           <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
-            <PopoverTrigger asChild>
+            <PopoverAnchor asChild>
               <div className="relative">
                 <Sparkles
                   className="absolute left-3 top-1/2 -translate-y-1/2 w-6 h-6 text-blue-200"
@@ -59,6 +59,8 @@ export function AIFilterBar({
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyDown={handleKeyDown}
+                  onFocus={() => setIsPopoverOpen(true)}
+                  onClick={() => setIsPopoverOpen(true)}
                   maxLength={50}
                 />
                 <button
@@ -68,11 +70,12 @@ export function AIFilterBar({
                   <Search className="w-6 h-6" />
                 </button>
               </div>
-            </PopoverTrigger>
+            </PopoverAnchor>
             {filterHistories.length > 0 && (
               <PopoverContent
                 className="w-[var(--radix-popover-trigger-width)] p-1"
                 align="start"
+                onOpenAutoFocus={(e) => e.preventDefault()}
               >
                 <div className="text-xs font-medium text-muted-foreground px-2 py-1.5">
                   最近の検索
@@ -104,15 +107,20 @@ export function AIFilterBar({
           variant="secondary"
           className="px-3 py-1 flex w-fit items-center gap-2 animate-in fade-in slide-in-from-top-1"
         >
-          <Sparkles className="w-4 h-4 text-blue-500" />
+          <span className="flex items-center">
+            <Sparkles className="w-5 h-5 text-blue-500" fill="currentColor" />
+          </span>
           <span className="text-sm">AI抽出: {activeFilter.query}</span>
-          <X
-            className="w-4 h-4 cursor-pointer hover:text-destructive transition-colors ml-1"
+          <button
+            type="button"
+            className="flex items-center justify-center cursor-pointer hover:text-destructive transition-colors ml-1 focus:outline-none"
             onClick={() => {
               onClearFilter();
               setInputValue("");
             }}
-          />
+          >
+            <X className="w-5 h-5" />
+          </button>
         </Badge>
       )}
     </div>
